@@ -16,6 +16,7 @@
 #   Publishes random weather updates
 #
 
+import sys
 import zmq
 from random import randrange
 
@@ -31,8 +32,11 @@ socket.bind("tcp://*:5556")
 
 # keep publishing 
 while True:
-    zipcode = randrange(1, 100000)
+    #zipcode = randrange(1, 100000)
+    zipcode = sys.argv[1] if len(sys.argv) > 1 else "10001"
     temperature = randrange(-80, 135)
     relhumidity = randrange(10, 60)
 
-    socket.send_string("%i %i %i" % (zipcode, temperature, relhumidity))
+    #print("Sending data: %s, %i, %i" % (zipcode, temperature, relhumidity))
+
+    socket.send_string("%i %i %i" % (int(zipcode), temperature, relhumidity))
