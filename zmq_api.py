@@ -18,6 +18,8 @@ def register_sub(ip, topic_filter):
 	sub_socket.bind("tcp://10.0.0.1:5556")
 	sub_socket.setsockopt_string(zmq.SUBSCRIBE, topic_filter)
 	sub_dict[topic_filter] = sub_socket
+	string = sub_dict.get(topic).recv_string()
+	print("Received: %s" % string)
 
 
 def publish(topic, value):
