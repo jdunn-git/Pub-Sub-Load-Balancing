@@ -1,5 +1,6 @@
 import sys
 import zmq
+import time
 from random import randrange
 from zmq_api import register_pub
 from zmq_api import publish
@@ -27,9 +28,10 @@ while True:
 
     data = "%i %i %i" %(int(zipcode), temperature, relhumidity)
 
-    #print("Sending data: %s, %i, %i" % (zipcode, temperature, relhumidity))
+    print("Sending data: %s, %i, %i" % (zipcode, temperature, relhumidity))
 
     #socket.send_string("%i %i %i" % (int(zipcode), temperature, relhumidity))
 
     publish(topic, data)
     print("Sent data")
+    time.sleep(0.5)

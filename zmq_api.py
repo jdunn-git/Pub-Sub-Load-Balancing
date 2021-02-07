@@ -15,9 +15,8 @@ def register_pub(ip, topic):
 
 def register_sub(ip, topic_filter):
 	sub_socket = context.socket(zmq.SUB)
-	print("Trying to register sub to tcp://%s:5556" % ip)
-	sub_socket.bind("tcp://%s:5556" % ip)
-	socket.setsockopt_string(zmq.SUBSCRIBE, topic_filter)
+	sub_socket.bind("tcp://10.0.0.1:5556")
+	sub_socket.setsockopt_string(zmq.SUBSCRIBE, topic_filter)
 	sub_dict[topic_filter] = sub_socket
 
 	return sub_socket
