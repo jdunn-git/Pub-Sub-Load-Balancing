@@ -21,7 +21,7 @@ if isinstance(zip_filter, bytes):
 
 print("Subscribing to %s" % zip_filter)
 
-socket = register_sub(srv_addr, zipfilter)
+socket = register_sub(srv_addr, zip_filter)
 
 # Process 10 updates
 total_temp = 0
