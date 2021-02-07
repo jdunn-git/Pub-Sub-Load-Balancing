@@ -19,6 +19,8 @@ def register_sub(ip, topic_filter):
 	socket.setsockopt_string(zmq.SUBSCRIBE, topic_filter)
 	sub_dict[topic_filter] = sub_socket
 
+	return sub_socket
+
 
 def publish(topic, value):
 	if pub_dict.get(topic) != None:
