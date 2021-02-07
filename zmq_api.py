@@ -17,7 +17,7 @@ def register_pub(ip, topic):
 
 
 def register_sub(ip, topic_filter):
-	sub_socket.connect("tcp://%i:5556" % ip)
+	sub_socket.connect("tcp://%s:5556" % ip)
 	sub_socket.setsockopt_string(zmq.SUBSCRIBE, topic_filter)
 	sub_dict[topic_filter] = sub_socket
 
