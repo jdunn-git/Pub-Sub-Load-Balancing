@@ -19,13 +19,16 @@ def register_sub(ip, topic_filter):
 	sub_socket.setsockopt_string(zmq.SUBSCRIBE, topic_filter)
 	sub_dict[topic_filter] = sub_socket
 
-	return sub_socket
-
 
 def publish(topic, value):
 	if pub_dict.get(topic) != None:
 		pub_socket = pub_dict[topic]
 		pub_socket.send_string(value)
+
+def listen(topic):
+	if sub_dict.get(topic) != None:
+		string = sub_dict.get(topic).recv_string()
+		return string
 
 
 #def notify(topic, value):
