@@ -1,5 +1,6 @@
 import sys
 import zmq
+from zmq_api import register_sub
 
 #  Socket to talk to server
 context = zmq.Context()
