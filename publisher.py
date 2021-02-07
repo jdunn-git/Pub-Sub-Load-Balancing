@@ -32,6 +32,6 @@ while True:
 
     #socket.send_string("%i %i %i" % (int(zipcode), temperature, relhumidity))
 
+    print("Trying to publish")
     publish(topic, data)
-    print("Sent data")
     time.sleep(0.5)

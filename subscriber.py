@@ -29,7 +29,7 @@ register_sub(srv_addr, zip_filter)
 # Process 10 updates
 total_temp = 0
 for update_nbr in range(10):
-	string = listen(zip_filter)
+    string = listen(zip_filter)
     zipcode, temperature, relhumidity = string.split()
     total_temp += int(temperature)
     print("Average temperature for zipcode '%s' was %dF" % (
