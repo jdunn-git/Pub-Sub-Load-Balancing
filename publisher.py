@@ -1,7 +1,8 @@
 import sys
 import zmq
 from random import randrange
-import zmq_api
+from zmq_api import register_pub
+from zmq_api import publish
 
 print("Current libzmq version is %s" % zmq.zmq_version())
 print("Current  pyzmq version is %s" % zmq.__version__)
