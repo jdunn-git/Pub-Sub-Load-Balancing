@@ -1,3 +1,4 @@
+import zmq
 import _thread
 from zmq_api import register_broker
 #from zmq_api import register_listener_for_pubs
@@ -10,15 +11,6 @@ from zmq_api import listen_for_pub_data
 print("Current libzmq version is %s" % zmq.zmq_version())
 print("Current  pyzmq version is %s" % zmq.__version__)
 
-# Register broker
-register_broker()
-
-# Start new listener for subs
-_thread.start_new_thread(register_subs, ())
-
-
-while True:
-	register_pubs()
 
 
 
@@ -46,6 +38,16 @@ def receive_pub_data(ip):
 	for val in string.split():
 		publish_to_sub(val)
 
+
+# Register broker
+register_broker()
+
+# Start new listener for subs
+_thread.start_new_thread(register_subs, ())
+
+
+while True:
+	register_pubs()
 
 
 

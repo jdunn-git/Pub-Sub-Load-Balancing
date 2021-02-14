@@ -65,7 +65,8 @@ def register_broker():
 	sub_listener_socket.bind("tcp://*:5555")
 
 def register_pub_with_broker(ip, topic):
-	pub_socket.bind("tcp://%s:5556" % ip)
+	print("Registering to broker at tcp://%s:5556 with topic: %s" % (ip, topic))
+	pub_socket.bind("tcp://*:5556")
 	pub_dict[topic] = pub_socket
 
 	pub_ip = socket.gethostbyname(socket.gethostname())
@@ -86,7 +87,7 @@ def register_sub_with_broker(ip, topic):
 
 	tmp_socket = context.socket(zmq.REQ)
 	tmp_socket.connect("tcp://%s:5555" % ip)
-	tmp_socket.send_string("Registering ip %s topic %s" % (sub_ip, topic))
+	tmp_socket.send_string("Registering ip %s" % (sub_ip))
 	resp = tmp_socket.recv()
 	if resp == "OK":
 		print("Registered subscriber with broker")
@@ -94,10 +95,15 @@ def register_sub_with_broker(ip, topic):
 
 def listen_for_pub_registration():
 	resp = pub_listener_socket.recv()
-	_, _, ip, _, topic = resp.split()
+	if isinstance(resp, bytes):
+		resp = resp.decode("ascii")
+	print("Got a publisher registration message: %s" % resp)
+	_, _, ip = resp.split(' ', 2)
+
+	print("Connecting to sub at: %s" % ip)
 
 	sock = context.socket(zmq.SUB)
-	sock.bind("tcp://%s:5556" % ip)
+	sock.connect("tcp://%s:5556" % ip)
 
 	# If it already exists, then the same pub will be trying to re-register, which should be fine
 	pub_dict[ip] = sock
@@ -108,7 +114,7 @@ def listen_for_pub_registration():
 
 def listen_for_sub_registration():
 	string = sub_listener_socket.recv()
-	_, _, ip, _, topic = string.split()
+	_, _, ip, _, topic = string.split(' ')
 
 	sock = context.socket(zmq.PUB)
 	sock.bind("tcp://%s:5556" % ip)
