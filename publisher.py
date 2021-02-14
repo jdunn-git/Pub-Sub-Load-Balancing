@@ -3,12 +3,15 @@ import zmq
 import time
 from random import randrange
 from zmq_api import register_pub
+from zmq_api import register_pub_with_broker
 from zmq_api import publish
 
 print("Current libzmq version is %s" % zmq.zmq_version())
 print("Current  pyzmq version is %s" % zmq.__version__)
 
-context = zmq.Context()
+broker_mode = sys.argv[2] if len(sys.argv) > 2 else 0
+
+#context = zmq.Context()
 
 # The difference here is that this is a publisher and its aim in life is
 # to just publish some value. The binding is as before.
@@ -17,7 +20,10 @@ context = zmq.Context()
 
 topic = "zipcode temperature relhumidity"
 
-register_pub("*", topic)
+if broker_mode == 0:
+	register_pub("*", topic)
+else:
+	register_pub_with_broker("10.0.0.3", topic)
 
 # keep publishing 
 while True:

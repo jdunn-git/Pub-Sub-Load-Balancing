@@ -59,7 +59,7 @@ def listen(topic):
 
 # Registers the broker send and receive socks: 1. to get notified of all active pubs and subs, 
 # 2. to receive published messages, and 3. to send published messages to the subscribers 
-def register_broker():
+def register_broker(ip):
 	pub_listener_socket.connect("tcp://*:5554")
 	pub_listener_socket.setsockopt_string(zmq.SUBSCRIBE, "Registering")
 

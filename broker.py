@@ -15,7 +15,7 @@ thread.start_new_thread(register_subs, ())
 
 while True:
 	# Start listening for published data
-	string = listen_for_pubs():
+	string = listen_for_pubs()
 
 	# Forward published data to the appropriate subs
     for val in string.split():
