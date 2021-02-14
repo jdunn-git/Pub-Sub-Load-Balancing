@@ -39,5 +39,8 @@ while True:
     #socket.send_string("%i %i %i" % (int(zipcode), temperature, relhumidity))
 
     print("Trying to publish")
-    publish(topic, data)
-    time.sleep(0.5)
+    if broker_mode == 0:
+	    publish(topic, data)
+    else:
+    	publish_to_broker(topic, data)
+	time.sleep(0.5)

@@ -1,6 +1,5 @@
 import sys
 import zmq
-import socket
 
 #  Socket to talk to server
 context = zmq.Context()
@@ -16,6 +15,9 @@ broker_send_socket = context.socket(zmq.PUB)
 
 pub_listener_socket = context.socket(zmq.REP)
 sub_listener_socket = context.socket(zmq.REP)
+
+pub_broker_socket = context.socket(zmq.REQ)
+
 
 # TODO: Test and make sure that all subs will register with all pubs for that topic, and all pubs will send to all pubs
 #			- This may just require defaulting to using "*" for subs, but it could be as complicated as adding new connects for the sub dynamically
@@ -66,28 +68,24 @@ def register_broker():
 
 def register_pub_with_broker(ip, topic):
 	print("Registering to broker at tcp://%s:5556 with topic: %s" % (ip, topic))
-	pub_socket.bind("tcp://*:5556")
-	pub_dict[topic] = pub_socket
+	pub_broker_socket.connect("tcp://*:5556")
+	pub_dict[topic] = pub_broker_socket
 
-	pub_ip = socket.gethostbyname(socket.gethostname())
-
-	tmp_socket = context.socket(zmq.REQ)
-	tmp_socket.connect("tcp://%s:5554" % ip)
-	tmp_socket.send_string("Registering ip %s topic: %s" % (pub_ip, topic))
-	resp = tmp_socket.recv()
-	if resp == "OK":
-		print("Registered publisher with broker")
+#	tmp_socket = context.socket(zmq.REQ)
+#	tmp_socket.connect("tcp://%s:5554" % ip)
+#	tmp_socket.send("Registering ip %s topic: %s" % (pub_ip, topic))
+#	resp = tmp_socket.recv()
+#	if resp == "OK":
+#		print("Registered publisher with broker")
 
 def register_sub_with_broker(ip, topic):
 	sub_socket.connect("tcp://%s:5556" % ip)
 	sub_socket.setsockopt_string(zmq.SUBSCRIBE, topic_filter)
 	sub_dict[topic_filter] = sub_socket
 
-	sub_ip = socket.gethostbyname(socket.gethostname())
-
 	tmp_socket = context.socket(zmq.REQ)
 	tmp_socket.connect("tcp://%s:5555" % ip)
-	tmp_socket.send_string("Registering ip %s" % (sub_ip))
+	tmp_socket.send("Registering topic %s" % (topic))
 	resp = tmp_socket.recv()
 	if resp == "OK":
 		print("Registered subscriber with broker")
@@ -114,20 +112,27 @@ def listen_for_pub_registration():
 
 def listen_for_sub_registration():
 	string = sub_listener_socket.recv()
-	_, _, ip, _, topic = string.split(' ')
+	_, _, topic = string.split(' ')
 
 	sock = context.socket(zmq.PUB)
-	sock.bind("tcp://%s:5556" % ip)
+	sock.bind("tcp://*:5556")
 
-	if sub_dict.get(topic) != None:
-		sub_dict.get(topic).update(sock)
+	if sub_dict.get(topic_filter) != None:
+		sub_dict.get(topic_filter).update(sock)
 	else:
-		sub_dict[topic] = {sock}
+		sub_dict[topic_filter] = {sock}
+
+def publish_to_broker(topic, value)
+	pub_dict.get(topic).send(value)
+	print("Sending Data")
+	resp = pub_dict.get(topic).recv()
+	if resp == "OK":
+		print("Published data to the broker")
 
 
-def listen_for_pub_data(ip):
-	if pub_dict.get(ip) != None:
-		string = pub_dict.get(ip).recv_string()
+def listen_for_pub_data():
+	# May need to expand this to send back the port with the register message, rebuild the socket, and then listen on that port here
+	string = pub_listener_socket.recv()
 
 	return string
 

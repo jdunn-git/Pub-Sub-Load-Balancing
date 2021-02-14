@@ -22,17 +22,17 @@ def register_subs():
 
 def register_pubs():
 	# Listen for new pubs entering the system
-	string = listen_for_pub_registration()
+	#string = listen_for_pub_registration()
 
-	_, ip, _, topic = string.split()
+	#_, ip, _, topic = string.split()
 
 	# Start new thread listening for data from this pub
-	_thread.start_new_thread(receive_pub_data, (ip))
+	_thread.start_new_thread(receive_pub_data, ())
 
 
-def receive_pub_data(ip):
+def receive_pub_data():
 	# Get the pub message
-	string = listen_for_pub_data(ip)
+	string = listen_for_pub_data()
 
 	# Forward published data to the appropriate subs
 	for val in string.split():
@@ -47,7 +47,7 @@ _thread.start_new_thread(register_subs, ())
 
 
 while True:
-	register_pubs()
+	receive_pub_data()
 
 
 
