@@ -100,7 +100,7 @@ def listen_for_pub_registration():
 	sock.bind("tcp://%s:5556" % ip)
 
 	# If it already exists, then the same pub will be trying to re-register, which should be fine
-	pub_dict.[ip] = sock
+	pub_dict[ip] = sock
 
 	ret = "ip %s topic %s" % (ip, topic)
 
@@ -120,8 +120,8 @@ def listen_for_sub_registration():
 
 
 def listen_for_pub_data(ip):
-	if pub_dict.get(ip) != None
-	string = pub_dict.get(ip).recv_string()
+	if pub_dict.get(ip) != None:
+		string = pub_dict.get(ip).recv_string()
 
 	return string
 
