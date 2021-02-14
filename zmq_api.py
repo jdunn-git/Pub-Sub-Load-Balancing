@@ -6,6 +6,7 @@ context = zmq.Context()
 
 pub_dict = dict()
 sub_dict = dict()
+sub_port_dict = dict()
 
 pub_socket = context.socket(zmq.PUB)
 sub_socket = context.socket(zmq.SUB)
@@ -18,6 +19,8 @@ sub_listener_socket = context.socket(zmq.REP)
 
 pub_broker_socket = context.socket(zmq.REQ)
 
+# Starting value for the ports used by subs int this api
+sub_port = 5556
 
 # TODO: Test and make sure that all subs will register with all pubs for that topic, and all pubs will send to all pubs
 #			- This may just require defaulting to using "*" for subs, but it could be as complicated as adding new connects for the sub dynamically
@@ -83,16 +86,19 @@ def register_pub_with_broker(ip, topic):
 #		print("Registered publisher with broker")
 
 def register_sub_with_broker(ip, topic_filter):
-	sub_socket.connect("tcp://%s:5556" % ip)
-	sub_socket.setsockopt_string(zmq.SUBSCRIBE, topic_filter)
-	sub_dict[topic_filter] = sub_socket
-
 	tmp_socket = context.socket(zmq.REQ)
 	tmp_socket.connect("tcp://%s:5555" % ip)
 	tmp_socket.send_string("Registering topic_filter %s" % (topic_filter))
 	resp = tmp_socket.recv()
-	if resp == "OK":
-		print("Registered subscriber with broker")
+	#if resp == "OK":
+	#	print( "Registered subscriber with broker")
+	if isinstance(resp, bytes):
+		resp = resp.decode("ascii")
+
+	sub_socket.connect("tcp://%s:%d" % (ip, int(resp)))
+	sub_socket.setsockopt_string(zmq.SUBSCRIBE, topic_filter)
+	sub_dict[topic_filter] = sub_socket
+
 
 
 def listen_for_pub_registration():
@@ -120,17 +126,23 @@ def listen_for_sub_registration():
 		string = string.decode("ascii")
 	_, _, topic_filter = string.split(' ')
 
-	sock = context.socket(zmq.PUB)
-	sock.bind("tcp://*:5556")
+	global sub_port
 
 	if sub_dict.get(topic_filter) != None:
-		sub_dict.get(topic_filter).update(sock)
+		print("Appending another sub listener for topic filter: %s" % topic_filter)
+		#sock = context.socket(zmq.PUB)
+		#sock.bind("tcp://*:%d" % sub_port)
+		#sub_dict.get(topic_filter).update(sock)
 	else:
+		sock = context.socket(zmq.PUB)
+		sock.bind("tcp://*:%d" % sub_port)
+		sub_port_dict[topic_filter] = sub_port
+		sub_port += 1
 		print("Adding sub listener for topic filter: %s" % topic_filter)
 		sub_dict[topic_filter] = {sock}
 
-	resp = "OK"
-	sub_listener_socket.send_string(resp)
+	resp = sub_port_dict.get(topic_filter)
+	sub_listener_socket.send_string(str(resp))
 
 
 def publish_to_broker(topic, value):
