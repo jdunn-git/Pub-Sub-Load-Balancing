@@ -5,11 +5,12 @@ from random import randrange
 from zmq_api import register_pub
 from zmq_api import register_pub_with_broker
 from zmq_api import publish
+from zmq_api import publish_to_broker
 
 print("Current libzmq version is %s" % zmq.zmq_version())
 print("Current  pyzmq version is %s" % zmq.__version__)
 
-broker_mode = sys.argv[2] if len(sys.argv) > 2 else 0
+broker_mode = int(sys.argv[2]) if len(sys.argv) > 2 else 0
 
 #context = zmq.Context()
 
@@ -20,7 +21,7 @@ broker_mode = sys.argv[2] if len(sys.argv) > 2 else 0
 
 topic = "zipcode temperature relhumidity"
 
-if broker_mode == 0:
+if int(broker_mode) == 0:
 	register_pub("*", topic)
 else:
 	register_pub_with_broker("10.0.0.3", topic)
@@ -42,5 +43,5 @@ while True:
     if broker_mode == 0:
 	    publish(topic, data)
     else:
-    	publish_to_broker(topic, data)
-	time.sleep(0.5)
+        publish_to_broker(topic, data)
+    time.sleep(0.5)

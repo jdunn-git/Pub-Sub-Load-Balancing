@@ -25,7 +25,7 @@ if isinstance(zip_filter, bytes):
 
 print("Subscribing to %s" % zip_filter)
 
-broker_mode = sys.argv[3] if len(sys.argv) > 3 else 0
+broker_mode = int(sys.argv[3]) if len(sys.argv) > 3 else 0
 if broker_mode == 0:
 	register_sub(srv_addr, zip_filter)
 else:

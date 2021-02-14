@@ -35,8 +35,7 @@ def receive_pub_data():
 	string = listen_for_pub_data()
 
 	# Forward published data to the appropriate subs
-	for val in string.split():
-		publish_to_sub(val)
+	publish_to_sub(string)
 
 
 # Register broker
