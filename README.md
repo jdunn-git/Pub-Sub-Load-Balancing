@@ -12,7 +12,7 @@ Each of the three processes (publisher, subscriber, and broker) will have need t
 
 ## Publisher
 
-```python3 publisher.py [zipcode] [broker_ip] [mode]```
+```$ python3 publisher.py [zipcode] [broker_ip] [mode]```
  - zipcode: This is the custom zipcode for which the publisher will be producing weather data.
  - broker_ip: This will be the ip address of the broker node. If running brokerless, then this param will be ignored.
  - mode: This will determine broker vs brokerless mode. For brokerless mode, use 0, for all other values, use 1.
@@ -25,7 +25,7 @@ Each of the three processes (publisher, subscriber, and broker) will have need t
  - mode: This will determine broker vs brokerless mode. For brokerless mode, use 0, for all other values, use 1.
 
 
-## Subscriber
+## Broker
 
 ```$ python3 broker.py```
 
