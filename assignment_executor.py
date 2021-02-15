@@ -1,7 +1,6 @@
 import os
 import sys
 import argparse
-import threading
 
 from signal import SIGINT
 import time
@@ -53,26 +52,33 @@ def execute(hosts, publishers, subscribers, broker_mode = False):
 
     if broker_mode:
         # Allocate first host as broker
-        commands.append(f"python3 broker.py")
+        commands.append(f"broker.py")
         # Allocate commands for publishers and subscribers
         for i in range(len(publishers)):
-            commands.append(f"python3 publisher.py -s 10.0.0.1 - z 1010{zip_holder} -b True")
+            commands.append(f"publisher.py -s 10.0.0.1 - z 1010{zip_holder} -b True")
             zip_holder += 1
 
         zip_holder = 1
         for i in range(len(subscribers)):
-            commands.append(f"python3 subscriber.py -s 10.0.0.1 - z 1010{zip_holder} -b True")
+            commands.append(f"subscriber.py -s 10.0.0.1 - z 1010{zip_holder} -b True")
             zip_holder += 1
 
     else:
         for i in range(len(publishers)):
-            commands.append(f"python3 publisher.py -s 10.0.0.1 - z 1010{zip_holder} -b True")
+            commands.append(f"publisher.py -s 10.0.0.1 - z 1010{zip_holder} -b True")
             zip_holder += 1
 
         zip_holder = 1
         for i in range(len(subscribers)):
-            commands.append(f"python3 subscriber.py -s 10.0.0.1 - z 1010{zip_holder} -b True")
+            commands.append(f"subscriber.py -s 10.0.0.1 - z 1010{zip_holder} -b True")
             zip_holder += 1
+
+    for command in commands:
+        execute_command = subprocess.run(["python3"],
+                                        stdout=subprocess.PIPE,
+                                        text=True,
+                                        input=command)
+        print(execute_command.stdout)
 
 
 
