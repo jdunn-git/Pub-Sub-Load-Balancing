@@ -10,7 +10,9 @@ from zmq_api import publish_to_broker
 print("Current libzmq version is %s" % zmq.zmq_version())
 print("Current  pyzmq version is %s" % zmq.__version__)
 
-broker_mode = int(sys.argv[2]) if len(sys.argv) > 2 else 0
+srv_addr = sys.argv[2] if len(sys.argv) > 2 else "localhost"
+
+broker_mode = int(sys.argv[3]) if len(sys.argv) > 3 else 0
 
 #context = zmq.Context()
 
@@ -24,7 +26,7 @@ topic = "zipcode temperature relhumidity"
 if int(broker_mode) == 0:
 	register_pub("*", topic)
 else:
-	register_pub_with_broker("10.0.0.3", topic)
+	register_pub_with_broker(srv_addr, topic)
 
 # keep publishing 
 while True:

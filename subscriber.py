@@ -29,7 +29,7 @@ broker_mode = int(sys.argv[3]) if len(sys.argv) > 3 else 0
 if broker_mode == 0:
 	register_sub(srv_addr, zip_filter)
 else:
-	register_sub_with_broker("10.0.0.3", zip_filter)
+	register_sub_with_broker(srv_addr, zip_filter)
 
 # Process 10 updates
 total_temp = 0
