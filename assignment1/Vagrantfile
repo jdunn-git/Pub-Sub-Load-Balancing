@@ -1,14 +1,6 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
 
-#--------Instructions-------------
-# vagrant up
-# vagrant ssh
-# sudo python3 /tmp/runner.py ThisIsTheTopic -s 5 -p 5 -f RawData2
-# sudo python3 /tmp/runner.py ThisIsTheTopic -s 5 -p 5 -f RawData2 -b
-
-#--------End Instructions-------------
-
 # All Vagrant configuration is done below. The "2" in Vagrant.configure
 # configures the configuration version (we support older styles for
 # backwards compatibility). Please don't change it unless you know what
@@ -23,38 +15,30 @@ Vagrant.configure("2") do |config|
   # boxes at https://vagrantcloud.com/search.
   config.vm.box = "ubuntu/bionic64"
 
-  #config.vm.provision "file",
-  #source: "broker.py",
-  #destination: "/tmp/"
+  config.vm.provision "file",
+  source: "assignment_executor.py",
+  destination: "/tmp/"
 
+  config.vm.provision "file",
+  source: "broker.py",
+  destination: "/tmp/"
 
-  #config.vm.provision "file",
-  #source: "BrokerAPI.py",
-  #destination: "/tmp/"
+  config.vm.provision "file",
+  source: "mr_topology.py",
+  destination: "/tmp/"
 
-  #config.vm.provision "file",
-  #source: "floodAPI.py",
-  #destination: "/tmp/"
+  config.vm.provision "file",
+  source: "publisher.py",
+  destination: "/tmp/"
 
-  #config.vm.provision "file",
-  #source: "helper.py",
-  #destination: "/tmp/"
+  config.vm.provision "file",
+  source: "subscriber.py",
+  destination: "/tmp/"
 
-  #config.vm.provision "file",
-  #source: "mr_topology.py",
-  #destination: "/tmp/"
+  config.vm.provision "file",
+  source: "zmq_api.py",
+  destination: "/tmp/"
 
-  #config.vm.provision "file",
-  #source: "publisher.py",
-  #destination: "/tmp/"
-
-  #config.vm.provision "file",
-  #source: "runner.py",
-  #destination: "/tmp/"
-
-  #config.vm.provision "file",
-  #source: "subscriber.py",
-  #destination: "/tmp/"
 
   # Provider-specific configuration so you can fine-tune various
   # backing providers for Vagrant. These expose provider-specific options.
@@ -84,6 +68,7 @@ Vagrant.configure("2") do |config|
   git clone https://github.com/mininet/mininet.git
   mininet/util/install.sh -a
   sudo pip3 install mininet
+  mkdir -p /tmp/assignment_output/
 SCRIPT
 config.vm.provision "shell", inline: $script, privileged: false
 end

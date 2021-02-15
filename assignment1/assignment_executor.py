@@ -1,6 +1,7 @@
 import os
 import sys
 import argparse
+import threading
 
 from signal import SIGINT
 import time
@@ -31,7 +32,7 @@ def parse_args():
     parser.add_argument("-s", "--subscribers", type=int, default=10, help="Number of subscribers, default 10, minimum is number of topics")
     parser.add_argument("-p", "--publishers", type=int, default=2, help="Number of publishers, default 2, minimum is number of topics")
     parser.add_argument("-r", "--racks", type=int, default=1, help="Number of racks, choices 1, 2 or 3")
-    parser.add_argument("-f", "--folder", type=str, default="NEW_REPORT")
+    parser.add_argument("-c", "--clean_state", default=False, action="store_true")
 
     parser.add_argument("-b", "--broker_mode", default=False, action="store_true")
 
@@ -52,34 +53,43 @@ def execute(hosts, publishers, subscribers, broker_mode = False):
 
     if broker_mode:
         # Allocate first host as broker
-        commands.append(f"broker.py")
+        commands.append(f"python3 broker.py")
         # Allocate commands for publishers and subscribers
         for i in range(len(publishers)):
-            commands.append(f"publisher.py -s 10.0.0.1 - z 1010{zip_holder} -b True")
+            commands.append(f"python3 publisher.py -s 10.0.0.1 - z 1010{zip_holder} -b True &> {output_dir}/")
             zip_holder += 1
 
         zip_holder = 1
         for i in range(len(subscribers)):
-            commands.append(f"subscriber.py -s 10.0.0.1 - z 1010{zip_holder} -b True")
+            commands.append(f"python3 subscriber.py -s 10.0.0.1 - z 1010{zip_holder} -b True")
             zip_holder += 1
 
     else:
         for i in range(len(publishers)):
-            commands.append(f"publisher.py -s 10.0.0.1 - z 1010{zip_holder} -b True")
+            commands.append(f"python3 publisher.py -s 10.0.0.1 - z 1010{zip_holder} -b True")
             zip_holder += 1
 
         zip_holder = 1
         for i in range(len(subscribers)):
-            commands.append(f"subscriber.py -s 10.0.0.1 - z 1010{zip_holder} -b True")
+            commands.append(f"python3 subscriber.py -s 10.0.0.1 - z 1010{zip_holder} -b True")
             zip_holder += 1
 
-    for command in commands:
-        execute_command = subprocess.run(["python3"],
-                                        stdout=subprocess.PIPE,
-                                        text=True,
-                                        input=command)
-        print(execute_command.stdout)
+    # Run threads on hosts
+    host_threads = []
+    for i in range(len(hosts)):
+        print(f"Call command {coomand[i]} on {hosts[i]}")
+        thread = threading.Thread(target=hosts[i].cmdPrint, args=(coomand[i],))
+        thread.start()
+        host_threads.append(thread)
 
+    for i in range(len(hosts)):
+        if i > 0 or not broker_mode:
+            print(f"Wait for {hosts[i].name} to be done")
+            host_threads[i].join()
+
+    if broker_mode:
+        print("Terminating Broker")
+        hosts[0].terminate()
 
 
 
@@ -95,7 +105,7 @@ def main():
 
     # Create Network
     print("Creating network")
-    network = Mininet(topology, link=TCLink, controller = OVSController)
+    network = Mininet(topology, link = TCLink, controller = OVSController)
 
     # activate the network
     print("Activating network")
@@ -105,16 +115,24 @@ def main():
     print("Dumping host connections")
     dumpNodeConnections(network.hosts)
 
-    if parse_args.broker_mode:
-        execute(hosts=network.hosts,
-                publishers = parse_args.publishers,
-                subscribers = parse_args.subscribers,
-                broker_mode = True)
+    output_dir = '/tmp/assignment_output/'
 
+    if os.path.isdir(output_dir):
+        if parse_args.broker_mode:
+            execute(hosts=network.hosts,
+                    publishers = parse_args.publishers,
+                    subscribers = parse_args.subscribers,
+                    broker_mode = True)
+
+        else:
+            execute(hosts=network.hosts,
+                    publishers = parse_args.publishers,
+                    subscribers = parse_args.subscribers)
     else:
-        execute(hosts=network.hosts,
-                publishers = parse_args.publishers,
-                subscribers = parse_args.subscribers)
+        print(f"{output_dir} does not exist")
+
+    print("Deactivating Network")
+    network.stop()
 
 
 if __name__ == '__main__':
