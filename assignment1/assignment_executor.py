@@ -28,7 +28,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
 
     # add optional arguments
-    parser.add_argument('topics', metavar="tops", type=str, nargs="+")
+    parser.add_argument("-t", "--topic", type=str, default="zipcode temperature relhumidity", help="Topic needed")
     parser.add_argument("-s", "--subscribers", type=int, default=10, help="Number of subscribers, default 10, minimum is number of topics")
     parser.add_argument("-p", "--publishers", type=int, default=2, help="Number of publishers, default 2, minimum is number of topics")
     parser.add_argument("-r", "--racks", type=int, default=1, help="Number of racks, choices 1, 2 or 3")
@@ -56,22 +56,22 @@ def execute(hosts, publishers, subscribers, broker_mode = False):
         commands.append(f"python3 broker.py")
         # Allocate commands for publishers and subscribers
         for i in range(len(publishers)):
-            commands.append(f"python3 publisher.py -s 10.0.0.1 - z 1010{zip_holder} -b True &> {output_dir}/")
+            commands.append(f"python3 publisher.py -s 10.0.0.1 - z 1010{zip_holder} -b True &> {output_dir}/{hosts[host_index].name}.out")
             zip_holder += 1
 
         zip_holder = 1
         for i in range(len(subscribers)):
-            commands.append(f"python3 subscriber.py -s 10.0.0.1 - z 1010{zip_holder} -b True")
+            commands.append(f"python3 subscriber.py -s 10.0.0.1 - z 1010{zip_holder} -b True &> {output_dir}/{hosts[host_index].name}.csv")
             zip_holder += 1
 
     else:
         for i in range(len(publishers)):
-            commands.append(f"python3 publisher.py -s 10.0.0.1 - z 1010{zip_holder} -b True")
+            commands.append(f"python3 publisher.py -s 10.0.0.1 - z 1010{zip_holder} -b True &> {output_dir}/{hosts[host_index].name}.out")
             zip_holder += 1
 
         zip_holder = 1
         for i in range(len(subscribers)):
-            commands.append(f"python3 subscriber.py -s 10.0.0.1 - z 1010{zip_holder} -b True")
+            commands.append(f"python3 subscriber.py -s 10.0.0.1 - z 1010{zip_holder} -b True &> {output_dir}/{hosts[host_index].name}.csv")
             zip_holder += 1
 
     # Run threads on hosts
@@ -119,13 +119,15 @@ def main():
 
     if os.path.isdir(output_dir):
         if parse_args.broker_mode:
-            execute(hosts=network.hosts,
+            execute(output_dir = output_dir,
+                    hosts=network.hosts,
                     publishers = parse_args.publishers,
                     subscribers = parse_args.subscribers,
                     broker_mode = True)
 
         else:
-            execute(hosts=network.hosts,
+            execute(output_dir = output_dir,
+                    hosts=network.hosts,
                     publishers = parse_args.publishers,
                     subscribers = parse_args.subscribers)
     else:
