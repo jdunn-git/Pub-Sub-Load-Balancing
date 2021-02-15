@@ -53,25 +53,25 @@ def execute(output_dir, hosts, publishers, subscribers, broker_mode = False):
 
     if broker_mode:
         # Allocate first host as broker
-        commands.append(f"python3 broker.py")
+        commands.append(f"python3 ./broker.py")
         # Allocate commands for publishers and subscribers
         for i in range(publishers):
-            commands.append(f"python3 publisher.py -s 10.0.0.1 - z 1010{zip_holder} -b True &> {output_dir}{hosts[host_index].name}.out")
+            commands.append(f"python3 ./publisher.py -s 10.0.0.1 -z 1010{zip_holder} -b &> {output_dir}{hosts[host_index].name}.out")
             zip_holder += 1
 
         zip_holder = 1
         for i in range(subscribers):
-            commands.append(f"python3 subscriber.py -s 10.0.0.1 - z 1010{zip_holder} -b True &> {output_dir}{hosts[host_index].name}.csv")
+            commands.append(f"python3 ./subscriber.py -s 10.0.0.1 -z 1010{zip_holder} -b &> {output_dir}{hosts[host_index].name}.csv")
             zip_holder += 1
 
     else:
         for i in range(publishers):
-            commands.append(f"python3 publisher.py -s 10.0.0.1 - z 1010{zip_holder} -b True &> {output_dir}{hosts[host_index].name}.out")
+            commands.append(f"python3 ./publisher.py -s 10.0.0.1 -z 1010{zip_holder} &> {output_dir}{hosts[host_index].name}.out")
             zip_holder += 1
 
         zip_holder = 1
         for i in range(subscribers):
-            commands.append(f"python3 subscriber.py -s 10.0.0.1 - z 1010{zip_holder} -b True &> {output_dir}{hosts[host_index].name}.csv")
+            commands.append(f"python3 ./subscriber.py -s 10.0.0.1 -z 1010{zip_holder} &> {output_dir}{hosts[host_index].name}.csv")
             zip_holder += 1
 
     # Run threads on hosts
@@ -94,14 +94,14 @@ def execute(output_dir, hosts, publishers, subscribers, broker_mode = False):
 
 
 def main():
-    parse_args = parse_args()
+    parsed_args = parse_args()
 
     # Create Topology
     print("Creating Topology")
-    topology = MR_Topo(racks = parse_args.racks,
-                       publishers = parse_args.publishers,
-                       subscribers = parse_args.subscribers,
-                       broker_mode = parse_args.broker_mode )
+    topology = MR_Topo(racks = parsed_args.racks,
+                       publishers = parsed_args.publishers,
+                       subscribers = parsed_args.subscribers,
+                       broker_mode = parsed_args.broker_mode )
 
     # Create Network
     print("Creating network")
@@ -118,19 +118,11 @@ def main():
     output_dir = '/tmp/assignment_output/'
 
     if os.path.isdir(output_dir):
-        if parse_args.broker_mode:
-            execute(output_dir = output_dir,
-                    hosts=network.hosts,
-                    publishers = parse_args.publishers,
-                    subscribers = parse_args.subscribers,
-                    broker_mode = True)
-
-        else:
-            execute(output_dir = output_dir,
-                    hosts=network.hosts,
-                    publishers = parse_args.publishers,
-                    subscribers = parse_args.subscribers)
-    else:
+        execute(output_dir = output_dir,
+                hosts=network.hosts,
+                publishers = parsed_args.publishers,
+                subscribers = parsed_args.subscribers,
+                broker_mode = parsed_args.broker_mode)
         print(f"{output_dir} does not exist")
 
     print("Deactivating Network")

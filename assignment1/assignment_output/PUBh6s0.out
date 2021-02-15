@@ -1,0 +1,7 @@
+Current libzmq version is 4.3.4
+Current  pyzmq version is 22.0.3
+Registered pub on tcp://*:5556
+Traceback (most recent call last):
+  File "./publisher.py", line 52, in <module>
+    temperature = randrange(-80, 135)
+NameError: name 'randrange' is not defined

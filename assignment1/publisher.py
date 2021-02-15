@@ -3,6 +3,7 @@ import sys
 import zmq
 import time
 
+from random import randrange
 from zmq_api import (
     publish,
     publish_to_broker,

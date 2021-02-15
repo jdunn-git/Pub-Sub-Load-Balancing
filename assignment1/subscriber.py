@@ -56,4 +56,4 @@ for update_nbr in range(10):
     #print("Average temperature for zipcode '%s' was %dF" % (
       #zip_filter, total_temp / (update_nbr+1))
     #)
-    print(f"Average temperature for zipcode {zip_filter} was {total_temp/ (update_nbr+1)")
+    print(f"Average temperature for zipcode {zip_filter} was {total_temp/ (update_nbr+1)}")
