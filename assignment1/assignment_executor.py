@@ -28,7 +28,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
 
     # add optional arguments
-    parser.add_argument("-t", "--topic", type=str, default="zipcode temperature relhumidity", help="Topic needed")
+    parser.add_argument("-t", "--topics", type=str, default="zipcode temperature relhumidity", help="Topic needed")
     parser.add_argument("-s", "--subscribers", type=int, default=10, help="Number of subscribers, default 10, minimum is number of topics")
     parser.add_argument("-p", "--publishers", type=int, default=2, help="Number of publishers, default 2, minimum is number of topics")
     parser.add_argument("-r", "--racks", type=int, default=1, help="Number of racks, choices 1, 2 or 3")
@@ -37,14 +37,14 @@ def parse_args():
     parser.add_argument("-b", "--broker_mode", default=False, action="store_true")
 
     # parse the args
-    args = parser.parse_args ()
+    args = parser.parse_args()
 
     args.subs = max(args.subscribers, len(args.topics))
     args.pubs = max(args.publishers, len(args.topics))
     return args
 
 
-def execute(hosts, publishers, subscribers, broker_mode = False):
+def execute(output_dir, hosts, publishers, subscribers, broker_mode = False):
 
     commands = []
     host_index = 0
@@ -55,34 +55,34 @@ def execute(hosts, publishers, subscribers, broker_mode = False):
         # Allocate first host as broker
         commands.append(f"python3 broker.py")
         # Allocate commands for publishers and subscribers
-        for i in range(len(publishers)):
-            commands.append(f"python3 publisher.py -s 10.0.0.1 - z 1010{zip_holder} -b True &> {output_dir}/{hosts[host_index].name}.out")
+        for i in range(publishers):
+            commands.append(f"python3 publisher.py -s 10.0.0.1 - z 1010{zip_holder} -b True &> {output_dir}{hosts[host_index].name}.out")
             zip_holder += 1
 
         zip_holder = 1
-        for i in range(len(subscribers)):
-            commands.append(f"python3 subscriber.py -s 10.0.0.1 - z 1010{zip_holder} -b True &> {output_dir}/{hosts[host_index].name}.csv")
+        for i in range(subscribers):
+            commands.append(f"python3 subscriber.py -s 10.0.0.1 - z 1010{zip_holder} -b True &> {output_dir}{hosts[host_index].name}.csv")
             zip_holder += 1
 
     else:
-        for i in range(len(publishers)):
-            commands.append(f"python3 publisher.py -s 10.0.0.1 - z 1010{zip_holder} -b True &> {output_dir}/{hosts[host_index].name}.out")
+        for i in range(publishers):
+            commands.append(f"python3 publisher.py -s 10.0.0.1 - z 1010{zip_holder} -b True &> {output_dir}{hosts[host_index].name}.out")
             zip_holder += 1
 
         zip_holder = 1
-        for i in range(len(subscribers)):
-            commands.append(f"python3 subscriber.py -s 10.0.0.1 - z 1010{zip_holder} -b True &> {output_dir}/{hosts[host_index].name}.csv")
+        for i in range(subscribers):
+            commands.append(f"python3 subscriber.py -s 10.0.0.1 - z 1010{zip_holder} -b True &> {output_dir}{hosts[host_index].name}.csv")
             zip_holder += 1
 
     # Run threads on hosts
     host_threads = []
-    for i in range(len(hosts)):
-        print(f"Call command {coomand[i]} on {hosts[i]}")
-        thread = threading.Thread(target=hosts[i].cmdPrint, args=(coomand[i],))
+    for i in range(len(hosts)-1):
+        print(f"Call command {commands[i]} on {hosts[i]}")
+        thread = threading.Thread(target=hosts[i].cmdPrint, args=(commands[i],))
         thread.start()
         host_threads.append(thread)
 
-    for i in range(len(hosts)):
+    for i in range(len(hosts)-1):
         if i > 0 or not broker_mode:
             print(f"Wait for {hosts[i].name} to be done")
             host_threads[i].join()

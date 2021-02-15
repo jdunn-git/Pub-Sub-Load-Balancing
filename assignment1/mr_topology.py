@@ -25,10 +25,10 @@ class MR_Topo(Topo):
     # switches equals the number of racks.
 
     def build(self, racks=1, publishers=10, subscribers=3, broker_mode=False):
-        print(f"Topology: Racks = {racks},
-                publishers = {publishers},
-                subsribers = {subscribers},
-                broker_mode = {broker_mode}")
+        print(f"Topology: Racks = {racks}, "
+                f"publishers = {publishers}, "
+                f"subsribers = {subscribers}, "
+                f"broker_mode = {broker_mode}")
         self.mr_switches = []
         self.mr_hosts = []
         # Python's range(N) generates 0..N-1
