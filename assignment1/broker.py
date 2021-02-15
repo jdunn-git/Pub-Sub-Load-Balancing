@@ -10,8 +10,8 @@ from zmq_api import (
 
 )
 
-print("Current libzmq version is %s" % zmq.zmq_version())
-print("Current  pyzmq version is %s" % zmq.__version__)
+print(f"Current libzmq version is {zmq.zmq_version()}")
+print(f"Current  pyzmq version is {zmq.__version__}")
 
 
 
