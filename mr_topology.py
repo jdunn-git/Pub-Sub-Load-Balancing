@@ -15,7 +15,7 @@ from mininet.link import TCLink
 
 # @NOTE@:  I do not think any change is needed to this logic
 
-class MR_Topo (Topo):
+class MR_Topo(Topo):
     "Map Reduce Topology."
     # override the build method. We define the number of racks. If Racks == 1,
     # All the map and reduce nodes are on the same rack. If Racks==2, then master
@@ -24,7 +24,7 @@ class MR_Topo (Topo):
     # rack, the map nodes on 2nd rack and reduce nodes on the third rack. Number of
     # switches equals the number of racks.
 
-    def build (self, racks=1, publishers=10, subscribers=3, broker_mode=False):
+    def build(self, racks=1, publishers=10, subscribers=3, broker_mode=False):
         print(f"Topology: Racks = {racks},
                 publishers = {publishers},
                 subsribers = {subscribers},

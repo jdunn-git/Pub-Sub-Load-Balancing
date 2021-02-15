@@ -44,6 +44,39 @@ def parse_args():
     return args
 
 
+def execute(hosts, publishers, subscribers, broker_mode = False):
+
+    commands = []
+    host_index = 0
+    ip_holder = 1
+    zip_holder = 1
+
+    if broker_mode:
+        # Allocate first host as broker
+        commands.append(f"python3 broker.py")
+        # Allocate commands for publishers and subscribers
+        for i in range(len(publishers)):
+            commands.append(f"python3 publisher.py -s 10.0.0.1 - z 1010{zip_holder} -b True")
+            zip_holder += 1
+
+        zip_holder = 1
+        for i in range(len(subscribers)):
+            commands.append(f"python3 subscriber.py -s 10.0.0.1 - z 1010{zip_holder} -b True")
+            zip_holder += 1
+
+    else:
+        for i in range(len(publishers)):
+            commands.append(f"python3 publisher.py -s 10.0.0.1 - z 1010{zip_holder} -b True")
+            zip_holder += 1
+
+        zip_holder = 1
+        for i in range(len(subscribers)):
+            commands.append(f"python3 subscriber.py -s 10.0.0.1 - z 1010{zip_holder} -b True")
+            zip_holder += 1
+
+
+
+
 def main():
     parse_args = parse_args()
 
@@ -65,3 +98,20 @@ def main():
     # debugging purposes
     print("Dumping host connections")
     dumpNodeConnections(network.hosts)
+
+    if parse_args.broker_mode:
+        execute(hosts=network.hosts,
+                publishers = parse_args.publishers,
+                subscribers = parse_args.subscribers,
+                broker_mode = True)
+
+    else:
+        execute(hosts=network.hosts,
+                publishers = parse_args.publishers,
+                subscribers = parse_args.subscribers)
+
+
+if __name__ == '__main__':
+    # Tell mininet to print useful information
+    setLogLevel('info')
+    main ()
