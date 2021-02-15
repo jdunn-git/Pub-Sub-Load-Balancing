@@ -1,8 +1,11 @@
 import sys
 import zmq
-from zmq_api import register_sub
-from zmq_api import register_sub_with_broker
-from zmq_api import listen
+
+from zmq_api import (
+    listen,
+    register_sub,
+    register_sub_with_broker
+)
 
 #  Socket to talk to server
 #context = zmq.Context()
