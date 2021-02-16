@@ -36,8 +36,8 @@ def parse_args():
 
     parser.add_argument("-b", "--broker_mode", default=False, action="store_true")
 
-    parser.add_argument ("-w", "--record_time", default=False, action="store_true")
-    parser.add_argument ("-d", "--record_dir", type=str, default="timing_data", help="Directory to store timing data")
+    parser.add_argument("-w", "--record_time", default=False, action="store_true")
+    parser.add_argument("-d", "--record_dir", type=str, default="timing_data", help="Directory to store timing data")
     
     # parse the args
     args = parser.parse_args()
@@ -49,54 +49,102 @@ def parse_args():
 
 def execute(output_dir, hosts, publishers, subscribers, broker_mode = False, executions=20, record_time = False, record_dir = "timing_data"):
 
+    pub_commands = []
+    pub_hosts = []
+    sub_commands = []
+    sub_hosts = []
+    broker_commands = []
+
     commands = []
 
+    zipcode = 10101
 
     if broker_mode:
-        host_index = 0
+        host_index = 1
         ip_holder = 1
-        zip_holder = 1
+        zip_holder = 10101
         # Allocate first host as broker
-        commands.append(f"python3 ./broker.py")
+        #commands.append(f"python3 ./broker.py")
+        broker_commands.append(f"python3 ./broker.py")
         # Allocate commands for publishers and subscribers
         for i in range(publishers):
-            commands.append(f"python3 ./publisher.py -s 10.0.0.1 -z 1010{zip_holder} -b -e {executions} -d -w -d {output_dir}{record_dir} &> {output_dir}{hosts[host_index].name}.out")
+            #commands.append(f"python3 ./publisher.py -s 10.0.0.1 -z {zip_holder} -b -e {executions} -w -d {output_dir}{record_dir} &> {output_dir}{hosts[host_index].name}.out")
+            pub_commands.append(f"python3 ./publisher.py -s 10.0.0.1 -z {zip_holder} -b -e {executions} -w -d {output_dir}{record_dir} &> {output_dir}{hosts[host_index].name}.out")
+            pub_hosts.append(hosts[host_index])
             zip_holder += 1
             host_index += 1
 
-        zip_holder = 1
+        zip_holder = 10101
         for i in range(subscribers):
-            commands.append(f"python3 ./subscriber.py -s 10.0.0.1 -z 1010{zip_holder} -b -e {executions} -w -d {output_dir}{record_dir} &> {output_dir}{hosts[host_index].name}.csv")
+            #commands.append(f"python3 ./subscriber.py -s 10.0.0.1 -z {zip_holder} -b -e {executions} -w -d {output_dir}{record_dir} &> {output_dir}{hosts[host_index].name}.csv")
+            sub_commands.append(f"python3 ./subscriber.py -s 10.0.0.1 -z {zip_holder} -b -e {executions} -w -d {output_dir}{record_dir} &> {output_dir}{hosts[host_index].name}.csv")
+            sub_hosts.append(hosts[host_index])
             zip_holder += 1
             host_index += 1
 
     else:
         host_index = 0
         ip_holder = 1
-        zip_holder = 1
+        zip_holder = 10101
         for i in range(publishers):
-            commands.append(f"python3 ./publisher.py -z 1010{zip_holder} -e {executions} -w -d {output_dir}{record_dir} &> {output_dir}{hosts[host_index].name}.out")
+            #commands.append(f"python3 ./publisher.py -z {zip_holder} -e {executions} -w -d {output_dir}{record_dir} &> {output_dir}{hosts[host_index].name}.out")
+            pub_commands.append(f"python3 ./publisher.py -z {zip_holder} -e {executions} -w -d {output_dir}{record_dir} &> {output_dir}{hosts[host_index].name}.out")
+            pub_hosts.append(hosts[host_index])
             zip_holder += 1
             host_index += 1
 
-        zip_holder = 1
+        zip_holder = 10101
         for i in range(subscribers):
-            commands.append(f"python3 ./subscriber.py -s 10.0.0.{ip_holder} -z 1010{zip_holder}  -e {executions} -w -d {output_dir}{record_dir} &> {output_dir}{hosts[host_index].name}.csv")
+            #commands.append(f"python3 ./subscriber.py -s 10.0.0.{ip_holder} -z {zip_holder} -e {executions} -w -d {output_dir}{record_dir} &> {output_dir}{hosts[host_index].name}.csv")
+            sub_commands.append(f"python3 ./subscriber.py -s 10.0.0.{ip_holder} -z {zip_holder} -e {executions} -w -d {output_dir}{record_dir} &> {output_dir}{hosts[host_index].name}.csv")
+            sub_hosts.append(hosts[host_index])
             ip_holder += 1
             zip_holder += 1
             host_index += 1
 
     # Run threads on hosts
     host_threads = []
-    for i in range(len(hosts)-1):
-        print(f"Call command {commands[i]} on {hosts[i]}")
-        thread = threading.Thread(target=hosts[i].cmdPrint, args=(commands[i],))
-        thread.start()
-        host_threads.append(thread)
+    host_names = []
+    hosts_in_use = 0
+    pubs_running = 0
+    subs_running = 0
+    hosts_to_run = len(sub_commands)+len(pub_commands)
+    if broker_mode:
+        hosts_to_run = hosts_to_run + 1
 
-    for i in range(len(hosts)-1):
+    while hosts_in_use < hosts_to_run:
+        print(f"Hosts to run: {hosts_to_run}, hosts in use: {hosts_in_use}")
+        if broker_mode and hosts_in_use == 0    :
+            print(f"Call command {broker_commands[0]} on {hosts[hosts_in_use]}")
+            thread = threading.Thread(target=hosts[0].cmdPrint, args=(broker_commands[0],))
+            thread.start()
+            host_threads.append(thread)
+            host_names.append(hosts[hosts_in_use].name)
+            hosts_in_use = hosts_in_use + 1
+
+        if subs_running < len(sub_commands):
+            print(f"Call command {sub_commands[subs_running]} on {sub_hosts[subs_running]}")
+            #thread = threading.Thread(target=hosts[i].cmdPrint, args=(commands[i],))
+            thread = threading.Thread(target=sub_hosts[subs_running].cmdPrint, args=(sub_commands[subs_running],))
+            thread.start()
+            host_threads.append(thread)
+            host_names.append(sub_hosts[subs_running].name)
+            subs_running = subs_running + 1
+            hosts_in_use = hosts_in_use + 1
+
+        if pubs_running < len(pub_commands):
+            print(f"Call command {pub_commands[pubs_running]} on {pub_hosts[pubs_running]}")
+            thread = threading.Thread(target=pub_hosts[pubs_running].cmdPrint, args=(pub_commands[pubs_running],))
+            thread.start()
+            host_threads.append(thread)
+            host_names.append(pub_hosts[pubs_running].name)
+            pubs_running = pubs_running + 1
+            hosts_in_use = hosts_in_use + 1
+
+
+    for i in range(hosts_in_use):
         if i > 0 or not broker_mode:
-            print(f"Wait for {hosts[i].name} to be done")
+            print(f"Wait for {host_names[i]} to be done")
             host_threads[i].join()
 
     if broker_mode:
