@@ -1,63 +1,63 @@
 Current libzmq version is 4.3.4
 Current  pyzmq version is 22.0.3
 Registered pub on tcp://*:5556
-Sending data: 10101, 128, 26
+Sending data: 10105, 27, 22
 Trying to publish
 Sending data to subscriber
-Sending data: 10101, 64, 12
+Sending data: 10105, 36, 15
 Trying to publish
 Sending data to subscriber
-Sending data: 10101, 64, 39
+Sending data: 10105, 1, 30
 Trying to publish
 Sending data to subscriber
-Sending data: 10101, -2, 58
+Sending data: 10105, -71, 14
 Trying to publish
 Sending data to subscriber
-Sending data: 10101, -15, 12
+Sending data: 10105, -48, 45
 Trying to publish
 Sending data to subscriber
-Sending data: 10101, 97, 58
+Sending data: 10105, -47, 37
 Trying to publish
 Sending data to subscriber
-Sending data: 10101, -27, 20
+Sending data: 10105, 97, 41
 Trying to publish
 Sending data to subscriber
-Sending data: 10101, -26, 23
+Sending data: 10105, -10, 23
 Trying to publish
 Sending data to subscriber
-Sending data: 10101, -3, 18
+Sending data: 10105, -55, 59
 Trying to publish
 Sending data to subscriber
-Sending data: 10101, 131, 55
+Sending data: 10105, 119, 45
 Trying to publish
 Sending data to subscriber
-Sending data: 10101, 83, 20
+Sending data: 10105, 117, 57
 Trying to publish
 Sending data to subscriber
-Sending data: 10101, 54, 30
+Sending data: 10105, 101, 17
 Trying to publish
 Sending data to subscriber
-Sending data: 10101, 109, 49
+Sending data: 10105, 112, 35
 Trying to publish
 Sending data to subscriber
-Sending data: 10101, 126, 44
+Sending data: 10105, -29, 18
 Trying to publish
 Sending data to subscriber
-Sending data: 10101, 16, 42
+Sending data: 10105, 5, 44
 Trying to publish
 Sending data to subscriber
-Sending data: 10101, -11, 16
+Sending data: 10105, 83, 56
 Trying to publish
 Sending data to subscriber
-Sending data: 10101, -17, 29
+Sending data: 10105, -34, 15
 Trying to publish
 Sending data to subscriber
-Sending data: 10101, -62, 24
+Sending data: 10105, 111, 16
 Trying to publish
 Sending data to subscriber
-Sending data: 10101, -19, 53
+Sending data: 10105, 80, 30
 Trying to publish
 Sending data to subscriber
-Sending data: 10101, -79, 11
+Sending data: 10105, 96, 44
 Trying to publish
 Sending data to subscriber

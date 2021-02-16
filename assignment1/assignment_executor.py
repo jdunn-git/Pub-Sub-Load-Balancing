@@ -47,33 +47,41 @@ def parse_args():
 def execute(output_dir, hosts, publishers, subscribers, broker_mode = False, executions=20):
 
     commands = []
-    host_index = 0
-    ip_holder = 1
-    zip_holder = 1
+
 
     if broker_mode:
+        host_index = 0
+        ip_holder = 1
+        zip_holder = 1
         # Allocate first host as broker
         commands.append(f"python3 ./broker.py")
         # Allocate commands for publishers and subscribers
         for i in range(publishers):
             commands.append(f"python3 ./publisher.py -s 10.0.0.1 -z 1010{zip_holder} -b -e {executions} &> {output_dir}{hosts[host_index].name}.out")
             zip_holder += 1
+            host_index += 1
 
         zip_holder = 1
         for i in range(subscribers):
             commands.append(f"python3 ./subscriber.py -s 10.0.0.1 -z 1010{zip_holder} -b &> {output_dir}{hosts[host_index].name}.csv")
             zip_holder += 1
+            host_index += 1
 
     else:
+        host_index = 0
+        ip_holder = 1
+        zip_holder = 1
         for i in range(publishers):
             commands.append(f"python3 ./publisher.py -z 1010{zip_holder} -e {executions} &> {output_dir}{hosts[host_index].name}.out")
             zip_holder += 1
+            host_index += 1
 
         zip_holder = 1
         for i in range(subscribers):
             commands.append(f"python3 ./subscriber.py -s 10.0.0.{ip_holder} -z 1010{zip_holder} &> {output_dir}{hosts[host_index].name}.csv")
             ip_holder += 1
             zip_holder += 1
+            host_index += 1
 
     # Run threads on hosts
     host_threads = []
@@ -125,7 +133,12 @@ def main():
                 subscribers = parsed_args.subscribers,
                 broker_mode = parsed_args.broker_mode,
                 executions = parsed_args.executions)
+    else:
         print(f"{output_dir} does not exist")
+        os.mkdir(output_dir)
+
+
+
 
     print("Deactivating Network")
     network.stop()

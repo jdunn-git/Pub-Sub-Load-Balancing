@@ -1,0 +1,33 @@
+Collecting updates from weather server...
+Subscribing to {zip_filter}
+Listening to publisher at 10.0.0.4 for 10104
+In listen
+Have socket for topic_filter 10104, waiting for message
+Average temperature for zipcode 10104 was 9.0
+In listen
+Have socket for topic_filter 10104, waiting for message
+Average temperature for zipcode 10104 was -6.0
+In listen
+Have socket for topic_filter 10104, waiting for message
+Average temperature for zipcode 10104 was -1.3333333333333333
+In listen
+Have socket for topic_filter 10104, waiting for message
+Average temperature for zipcode 10104 was 2.0
+In listen
+Have socket for topic_filter 10104, waiting for message
+Average temperature for zipcode 10104 was -14.0
+In listen
+Have socket for topic_filter 10104, waiting for message
+Average temperature for zipcode 10104 was 0.6666666666666666
+In listen
+Have socket for topic_filter 10104, waiting for message
+Average temperature for zipcode 10104 was 15.142857142857142
+In listen
+Have socket for topic_filter 10104, waiting for message
+Average temperature for zipcode 10104 was 24.0
+In listen
+Have socket for topic_filter 10104, waiting for message
+Average temperature for zipcode 10104 was 19.444444444444443
+In listen
+Have socket for topic_filter 10104, waiting for message
+Average temperature for zipcode 10104 was 14.2
