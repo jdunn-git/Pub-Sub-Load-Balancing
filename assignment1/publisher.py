@@ -3,6 +3,7 @@ import datetime
 import sys
 import zmq
 import time
+import os
 
 from random import randrange
 from zmq_api import (
@@ -21,8 +22,8 @@ parser.add_argument ("-t", "--topic", type=str, default="zipcode temperature rel
 parser.add_argument ("-s", "--srv_addr", type=str, default="localhost", help="Server Address")
 parser.add_argument ("-b", "--broker_mode", default=False, action="store_true")
 parser.add_argument ("-z", "--zip_code", type=str, default="10001", help="Zip Code")
-parser.add_argument ( "-e", "--executions", type=int, default=20, help="Number of executions for the program")
-parser.add_argument ("-r", "--record_time", default=False, action="store_true")
+parser.add_argument ("-e", "--executions", type=int, default=20, help="Number of executions for the program")
+parser.add_argument ("-w", "--record_time", default=False, action="store_true")
 parser.add_argument ("-d", "--record_dir", type=str, default="timing_data", help="Directory to store timing data")
 args = parser.parse_args ()
 
@@ -52,9 +53,9 @@ else:
 if args.record_time:
     if not os.path.isdir(args.record_dir):
         os.mkdir(args.record_dir)
-    f = open(f"{args.record_dir}/pub_{zip_filter}.dat",wr)
-    f.write(datetime.now().time())
-
+    f = open(f"{args.record_dir}/pub_{zip_code}.dat","a")
+    f.write(str(datetime.datetime.utcnow().timestamp())+'\n')
+    f.close()
 
 # keep publishing
 messages_published = 0

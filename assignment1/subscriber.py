@@ -1,7 +1,8 @@
 import argparse
 import sys
 import zmq
-from datetime import datetime
+import os
+import datetime
 
 from zmq_api import (
     listen,
@@ -65,6 +66,7 @@ for update_nbr in range(10):
 if args.record_time:
     if not os.path.isdir(args.record_dir):
         os.mkdir(args.record_dir)
-    f = open(f"{args.record_dir}/sub_{zip_filter}.dat",wr)
-    f.write(datetime.now().time())
+    f = open(f"{args.record_dir}/sub_{zip_filter}.dat","a")
+    f.write(str(datetime.datetime.utcnow().timestamp())+'\n')
+    f.close()
 
