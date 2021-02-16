@@ -1,63 +1,63 @@
 Current libzmq version is 4.3.4
 Current  pyzmq version is 22.0.3
-Registered pub on tcp://*:5556
-Sending data: 10105, 27, 22
+Registering to broker at tcp://10.0.0.1:5554 with topic: zipcode temperature relhumidity
+Sending data: 10105, -41, 19
 Trying to publish
-Sending data to subscriber
-Sending data: 10105, 36, 15
+Sending Data number 0 at 1613437781.819872
+Sending data: 10105, 65, 27
 Trying to publish
-Sending data to subscriber
-Sending data: 10105, 1, 30
+Sending Data number 1 at 1613437782.357622
+Sending data: 10105, -32, 45
 Trying to publish
-Sending data to subscriber
-Sending data: 10105, -71, 14
+Sending Data number 2 at 1613437782.876948
+Sending data: 10105, -73, 21
 Trying to publish
-Sending data to subscriber
-Sending data: 10105, -48, 45
+Sending Data number 3 at 1613437783.409329
+Sending data: 10105, 32, 14
 Trying to publish
-Sending data to subscriber
-Sending data: 10105, -47, 37
+Sending Data number 4 at 1613437783.958627
+Sending data: 10105, 40, 31
 Trying to publish
-Sending data to subscriber
-Sending data: 10105, 97, 41
+Sending Data number 5 at 1613437784.498444
+Sending data: 10105, -52, 55
 Trying to publish
-Sending data to subscriber
-Sending data: 10105, -10, 23
+Sending Data number 6 at 1613437785.009778
+Sending data: 10105, 11, 22
 Trying to publish
-Sending data to subscriber
-Sending data: 10105, -55, 59
+Sending Data number 7 at 1613437785.522955
+Sending data: 10105, 74, 51
 Trying to publish
-Sending data to subscriber
-Sending data: 10105, 119, 45
+Sending Data number 8 at 1613437786.035061
+Sending data: 10105, -33, 51
 Trying to publish
-Sending data to subscriber
-Sending data: 10105, 117, 57
+Sending Data number 9 at 1613437786.544337
+Sending data: 10105, 24, 58
 Trying to publish
-Sending data to subscriber
-Sending data: 10105, 101, 17
+Sending Data number 10 at 1613437787.050281
+Sending data: 10105, 103, 34
 Trying to publish
-Sending data to subscriber
-Sending data: 10105, 112, 35
+Sending Data number 11 at 1613437787.555864
+Sending data: 10105, 47, 35
 Trying to publish
-Sending data to subscriber
-Sending data: 10105, -29, 18
+Sending Data number 12 at 1613437788.063729
+Sending data: 10105, 110, 59
 Trying to publish
-Sending data to subscriber
-Sending data: 10105, 5, 44
+Sending Data number 13 at 1613437788.570135
+Sending data: 10105, 3, 26
 Trying to publish
-Sending data to subscriber
-Sending data: 10105, 83, 56
+Sending Data number 14 at 1613437789.07708
+Sending data: 10105, 61, 39
 Trying to publish
-Sending data to subscriber
-Sending data: 10105, -34, 15
+Sending Data number 15 at 1613437789.583497
+Sending data: 10105, 89, 54
 Trying to publish
-Sending data to subscriber
-Sending data: 10105, 111, 16
+Sending Data number 16 at 1613437790.092392
+Sending data: 10105, 45, 48
 Trying to publish
-Sending data to subscriber
-Sending data: 10105, 80, 30
+Sending Data number 17 at 1613437790.60051
+Sending data: 10105, 124, 43
 Trying to publish
-Sending data to subscriber
-Sending data: 10105, 96, 44
+Sending Data number 18 at 1613437791.111922
+Sending data: 10105, 32, 41
 Trying to publish
-Sending data to subscriber
+Sending Data number 19 at 1613437791.626282

@@ -38,10 +38,10 @@ def register_pub(topic):
 	print("Registered pub on tcp://*:5556")
 
 # Publishes data for the publisher based on the registered topic
-def publish(topic, value):
+def publish(topic, value, timestamp):
 	if pub_dict.get(topic) != None:
 		pub_dict.get(topic).send_string(value)
-		print("Sending data to subscriber")
+		print(f"Sending data to subscriber at {timestamp}")
 
 
 
@@ -145,12 +145,12 @@ def listen_for_sub_registration():
 	sub_listener_socket.send_string(str(resp))
 
 
-def publish_to_broker(topic, value, message_number):
+def publish_to_broker(topic, value, message_number, timestamp):
 	pub_dict.get(topic).send_string(value)
-	print(f"Sending Data number {message_number}")
+	print(f"Sending Data number {message_number} at {timestamp}")
 	resp = pub_dict.get(topic).recv()
 	if resp == "OK":
-		print("Published data to the broker")
+		print(f"Published data to the broker at {timestamp}")
 
 
 def listen_for_pub_data():

@@ -1,4 +1,5 @@
 import argparse
+import datetime
 import sys
 import zmq
 import time
@@ -66,8 +67,8 @@ while messages_to_publish > messages_published:
 
     print("Trying to publish")
     if not broker_mode:
-	    publish(topic, data)
+	    publish(topic, data, datetime.datetime.utcnow().timestamp())
     else:
-        publish_to_broker(topic, data, messages_published)
+        publish_to_broker(topic, data, messages_published, datetime.datetime.utcnow().timestamp())
     time.sleep(0.5)
     messages_published += 1
