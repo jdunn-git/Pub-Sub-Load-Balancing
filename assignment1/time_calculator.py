@@ -18,13 +18,13 @@ if not os.path.isdir(args.directory):
 # Get all entries from -d
 entries = os.listdir(args.directory)
 
-pub_data_dict = {}
-sub_data_dict = {}
-
 results_file = open("test_results.csv","w")
 
 for ent in entries:
 	if ent.startswith("test_"):
+		print(f"Generating data for {ent}")
+		pub_data_dict = {}
+		sub_data_dict = {}
 
 		results_file.write(ent + ", ")
 
@@ -73,9 +73,13 @@ for ent in entries:
 		zip_count = 0
 
 		# Calculate difference and save in csv file
-		for zipcode in sub_data_dict:
+		for zipcode_key in sub_data_dict:
+			dash_index = zipcode_key.find('-')
+			zipcode = zipcode_key
+			if dash_index != -1:
+				zipcode = zipcode_key[0:dash_index]
 			pub_times = pub_data_dict[zipcode]
-			sub_times = sub_data_dict[zipcode]
+			sub_times = sub_data_dict[zipcode_key]
 
 			zip_count+= 1
 
@@ -83,6 +87,8 @@ for ent in entries:
 
 			for key in sub_times:
 				# Get times in milliseconds
+				if pub_times.get(key) == None:
+					print(pub_times)
 				time_1 = float(pub_times[key]) * 1000
 				time_2 = float(sub_times[key]) * 1000
 

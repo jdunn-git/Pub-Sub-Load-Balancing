@@ -16,6 +16,7 @@ parser.add_argument ("-s", "--srv_addr", type=str, default="localhost", help="Se
 parser.add_argument ("-b", "--broker_mode", default=False, action="store_true")
 parser.add_argument ("-z", "--zip_code", type=str, default="10001", help="Zip Code")
 parser.add_argument ("-e", "--executions", type=int, default=20, help="Number of executions for the program")
+parser.add_argument ("-i", "--sub_id", type=int, default=0, help="id of this subscriber")
 parser.add_argument ("-w", "--record_time", default=False, action="store_true")
 parser.add_argument ("-d", "--record_dir", type=str, default="timing_data", help="Directory to store timing data")
 args = parser.parse_args ()
@@ -56,7 +57,7 @@ f = None
 if args.record_time:
     if not os.path.isdir(args.record_dir):
         os.mkdir(args.record_dir)
-    f = open(f"{args.record_dir}/sub_{zip_filter}.dat","a")
+    f = open(f"{args.record_dir}/sub_{zip_filter}-{args.sub_id}.dat","a")
 
 # Process 10 updates
 total_temp = 0

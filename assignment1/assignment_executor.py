@@ -78,20 +78,21 @@ def execute(output_dir, hosts, publishers, subscribers, ratio, broker_mode = Fal
         # Allocate commands for publishers and subscribers
         for i in range(publishers):
             zip_holder = int(zipcode)
-            #commands.append(f"python3 ./publisher.py -s 10.0.0.1 -z {zip_holder} -b -e {executions} -w -d {output_dir}{record_dir} &> {output_dir}{hosts[host_index].name}.out")
             pub_commands.append(f"python3 ./publisher.py -s 10.0.0.1 -z {zip_holder} -b -e {executions} -w -d {output_dir}{record_dir} &> {output_dir}{hosts[host_index].name}.out")
             pub_hosts.append(hosts[host_index])
             zipcode += 1 * pub_mod
-            host_index += 1
+            host_index += 1     
 
         zipcode = float(10101)
         for i in range(subscribers):
             zip_holder = int(zipcode)
-            #commands.append(f"python3 ./subscriber.py -s 10.0.0.1 -z {zip_holder} -b -e {executions} -w -d {output_dir}{record_dir} &> {output_dir}{hosts[host_index].name}.out")
-            sub_commands.append(f"python3 ./subscriber.py -s 10.0.0.1 -z {zip_holder} -b -e {executions} -w -d {output_dir}{record_dir} &> {output_dir}{hosts[host_index].name}.out")
+            sub_commands.append(f"python3 ./subscriber.py -s 10.0.0.1 -z {zip_holder} -b -e {executions} -i {i} -w -d {output_dir}{record_dir} &> {output_dir}{hosts[host_index].name}.out")
             sub_hosts.append(hosts[host_index])
             zipcode += 1 * sub_mod
             host_index += 1
+            # Cycle the zipcode if need be
+            if int(zipcode) % publishers == 0:
+                zipcode = float(10101)
 
     else:
         host_index = 0
@@ -110,11 +111,15 @@ def execute(output_dir, hosts, publishers, subscribers, ratio, broker_mode = Fal
             ip_holder = int(ip_end)
             zip_holder = int(zipcode)
             #commands.append(f"python3 ./subscriber.py -s 10.0.0.{ip_holder} -z {zip_holder} -e {executions} -w -d {output_dir}{record_dir} &> {output_dir}{hosts[host_index].name}.csv")
-            sub_commands.append(f"python3 ./subscriber.py -s 10.0.0.{ip_holder} -z {zip_holder} -e {executions} -w -d {output_dir}{record_dir} &> {output_dir}{hosts[host_index].name}.csv")
+            sub_commands.append(f"python3 ./subscriber.py -s 10.0.0.{ip_holder} -z {zip_holder} -e {executions} -i {i} -w -d {output_dir}{record_dir} &> {output_dir}{hosts[host_index].name}.csv")
             sub_hosts.append(hosts[host_index])
             ip_end += 1 / ratio
             zipcode += 1 * sub_mod
             host_index += 1
+            # Cycle the zipcode and the ip_end if need be
+            if int(zipcode) % publishers == 0:
+                zipcode = float(10101)
+                ip_end = float(1)
 
     # Run threads on hosts
     host_threads = []
