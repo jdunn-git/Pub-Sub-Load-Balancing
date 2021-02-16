@@ -23,4 +23,4 @@ Once you have finished, you can run `python3 timing_calculator.py` and it will g
 
 We can run additional tests and increment the -d directoy name, and the output will include all tests ran up to that point. If we want to remove any data, then we will need to manually clean up that directory from the assignment_output folder.
 
-> Note that the csv structure is: [test_name], [pub-sub time difference 1], [pub-sub time difference 2], ..., [pub-sub time difference n]
+> Note that the csv structure is: [test_name], [pub-sub pair 1 time difference 1], [pub-sub pair 1 time difference 2], ..., [pub-sub pair n time difference m], where n is the number of pub-sub pairs, and m is the number of messages received by the subscribers
