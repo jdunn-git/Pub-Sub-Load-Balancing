@@ -6,7 +6,7 @@ To start mininet, you can run the command ```sudo mn -x --topo=tree,fanout=3,dep
 
 # Running the Processes
 
-On separate hosts, you will need to be prepared to run commands separately based on which api mode you will be using. We are usiong command line arguments to switch between broker mode and brokerless mode.
+On separate hosts, you will need to be prepared to run commands separately based on which api mode you will be using. We are using command line arguments to switch between broker mode and brokerless mode.
 
 Each of the three processes (publisher, subscriber, and broker) will have need their own unique command to run from inside of mininet.
 
@@ -45,29 +45,29 @@ We will be using zip codes 10101 and 10102 to demonstrate data being routed corr
 
 Using this configuration, you would run the following commands on the corresponding hosts:
 
-#### Broker: 
+#### Broker:
 On host 1, run:
-```$ python3 broker.go```
+```$ python3 broker.py```
 
-#### Publishers:  
+#### Publishers:
 On host 2, run:
-```$ python3 publisher.go 10101 10.0.0.1 1```
+```$ python3 publisher.py 10101 10.0.0.1 1```
 
 On host 3, run:
-```$ python3 publisher.go 10101 10.0.0.1 1```
+```$ python3 publisher.py 10101 10.0.0.1 1```
 
 On host 4, run:
-```$ python3 publisher.go 10102 10.0.0.1 1```
+```$ python3 publisher.py 10102 10.0.0.1 1```
 
-#### Subscribers: 
+#### Subscribers:
 On host 5, run:
-```$ python3 subscriber.go 10.0.0.1 10101 1```
+```$ python3 subscriber.py 10.0.0.1 10101 1```
 
 On host 6, run:
-```$ python3 subscriber.go 10.0.0.1 10102 1```
+```$ python3 subscriber.py 10.0.0.1 10102 1```
 
 On host 7, run:
-```$ python3 subscriber.go 10.0.0.1 10102 1```
+```$ python3 subscriber.py 10.0.0.1 10102 1```
 
 
 
@@ -82,23 +82,22 @@ We will be using zip codes 10101 and 10102 to demonstrate data being routed corr
 
 Using this configuration, you would run the following commands on the corresponding hosts:
 
-#### Publishers:  
+#### Publishers:
 On host 1, run:
-```$ python3 publisher.go 10101 10.0.0.1 0```
+```$ python3 publisher.py 10101 10.0.0.1 0```
 
 On host 2, run:
-```$ python3 publisher.go 10101 10.0.0.1 0```
+```$ python3 publisher.py 10101 10.0.0.1 0```
 
 On host 3, run:
-```$ python3 publisher.go 10102 10.0.0.1 0```
+```$ python3 publisher.py 10102 10.0.0.1 0```
 
-#### Subscribers: 
+#### Subscribers:
 On host 4, run:
-```$ python3 subscriber.go 10.0.0.1 10101 0```
+```$ python3 subscriber.py 10.0.0.1 10101 0```
 
 On host 5, run:
-```$ python3 subscriber.go 10.0.0.3 10102 0```
+```$ python3 subscriber.py 10.0.0.3 10102 0```
 
 On host 6, run:
-```$ python3 subscriber.go 10.0.0.3 10102 0```
-
+```$ python3 subscriber.py 10.0.0.3 10102 0```

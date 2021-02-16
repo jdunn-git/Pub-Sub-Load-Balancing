@@ -1,15 +1,17 @@
 import zmq
 import _thread
-from zmq_api import register_broker
-#from zmq_api import register_listener_for_pubs
-from zmq_api import listen_for_pub_registration
-#from zmq_api import register_listener_for_pubs
-from zmq_api import listen_for_sub_registration
-from zmq_api import publish_to_sub
-from zmq_api import listen_for_pub_data
 
-print("Current libzmq version is %s" % zmq.zmq_version())
-print("Current  pyzmq version is %s" % zmq.__version__)
+from zmq_api import (
+	listen_for_pub_data,
+	listen_for_pub_registration,
+	listen_for_sub_registration,
+	publish_to_sub,
+	register_broker,
+
+)
+
+print(f"Current libzmq version is {zmq.zmq_version()}")
+print(f"Current  pyzmq version is {zmq.__version__}")
 
 
 
@@ -47,9 +49,3 @@ _thread.start_new_thread(register_subs, ())
 
 while True:
 	receive_pub_data()
-
-
-
-
-
-
