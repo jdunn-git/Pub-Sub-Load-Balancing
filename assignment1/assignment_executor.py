@@ -136,6 +136,12 @@ def main():
     else:
         print(f"{output_dir} does not exist")
         os.mkdir(output_dir)
+        execute(output_dir = output_dir,
+                hosts=network.hosts,
+                publishers = parsed_args.publishers,
+                subscribers = parsed_args.subscribers,
+                broker_mode = parsed_args.broker_mode,
+                executions = parsed_args.executions)
 
 
 
