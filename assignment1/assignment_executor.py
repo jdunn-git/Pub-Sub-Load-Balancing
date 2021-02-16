@@ -33,6 +33,7 @@ def parse_args():
     parser.add_argument("-p", "--publishers", type=int, default=2, help="Number of publishers, default 2, minimum is number of topics")
     parser.add_argument("-r", "--racks", type=int, default=1, help="Number of racks, choices 1, 2 or 3")
     parser.add_argument("-e", "--executions", type=int, default=20, help="Number of executions for the program")
+    parser.add_argument("-f", "--ratio", type=float, default=1, help="Ratio of subscribers to publishers.")
 
     parser.add_argument("-b", "--broker_mode", default=False, action="store_true")
 
@@ -47,7 +48,7 @@ def parse_args():
     return args
 
 
-def execute(output_dir, hosts, publishers, subscribers, broker_mode = False, executions=20, record_time = False, record_dir = "timing_data"):
+def execute(output_dir, hosts, publishers, subscribers, ratio, broker_mode = False, executions=20, record_time = False, record_dir = "timing_data"):
 
     pub_commands = []
     pub_hosts = []
@@ -59,47 +60,60 @@ def execute(output_dir, hosts, publishers, subscribers, broker_mode = False, exe
 
     zipcode = 10101
 
+    pub_mod = 1
+    sub_mod = 1
+
+    if ratio > 1:
+        sub_mod = 1/ratio
+    else:
+        pub_mod = ratio
+
     if broker_mode:
         host_index = 1
         ip_holder = 1
-        zip_holder = 10101
+        zipcode = float(10101)
         # Allocate first host as broker
         #commands.append(f"python3 ./broker.py")
         broker_commands.append(f"python3 ./broker.py")
         # Allocate commands for publishers and subscribers
         for i in range(publishers):
+            zip_holder = int(zipcode)
             #commands.append(f"python3 ./publisher.py -s 10.0.0.1 -z {zip_holder} -b -e {executions} -w -d {output_dir}{record_dir} &> {output_dir}{hosts[host_index].name}.out")
             pub_commands.append(f"python3 ./publisher.py -s 10.0.0.1 -z {zip_holder} -b -e {executions} -w -d {output_dir}{record_dir} &> {output_dir}{hosts[host_index].name}.out")
             pub_hosts.append(hosts[host_index])
-            zip_holder += 1
+            zipcode += 1 * pub_mod
             host_index += 1
 
-        zip_holder = 10101
+        zipcode = float(10101)
         for i in range(subscribers):
+            zip_holder = int(zipcode)
             #commands.append(f"python3 ./subscriber.py -s 10.0.0.1 -z {zip_holder} -b -e {executions} -w -d {output_dir}{record_dir} &> {output_dir}{hosts[host_index].name}.csv")
             sub_commands.append(f"python3 ./subscriber.py -s 10.0.0.1 -z {zip_holder} -b -e {executions} -w -d {output_dir}{record_dir} &> {output_dir}{hosts[host_index].name}.csv")
             sub_hosts.append(hosts[host_index])
-            zip_holder += 1
+            zipcode += 1 * sub_mod
             host_index += 1
 
     else:
         host_index = 0
-        ip_holder = 1
-        zip_holder = 10101
+        ip_end = float(1)
+        zipcode = float(10101)
         for i in range(publishers):
+            zip_holder = int(zipcode)
             #commands.append(f"python3 ./publisher.py -z {zip_holder} -e {executions} -w -d {output_dir}{record_dir} &> {output_dir}{hosts[host_index].name}.out")
             pub_commands.append(f"python3 ./publisher.py -z {zip_holder} -e {executions} -w -d {output_dir}{record_dir} &> {output_dir}{hosts[host_index].name}.out")
             pub_hosts.append(hosts[host_index])
-            zip_holder += 1
+            zipcode += 1 * pub_mod
             host_index += 1
 
-        zip_holder = 10101
+        zipcode = float(10101)
         for i in range(subscribers):
+            ip_holder = int(ip_end)
+            zip_holder = int(zipcode)
             #commands.append(f"python3 ./subscriber.py -s 10.0.0.{ip_holder} -z {zip_holder} -e {executions} -w -d {output_dir}{record_dir} &> {output_dir}{hosts[host_index].name}.csv")
             sub_commands.append(f"python3 ./subscriber.py -s 10.0.0.{ip_holder} -z {zip_holder} -e {executions} -w -d {output_dir}{record_dir} &> {output_dir}{hosts[host_index].name}.csv")
             sub_hosts.append(hosts[host_index])
-            ip_holder += 1
-            zip_holder += 1
+            ip_end += 1 / ratio
+            zipcode += 1 * sub_mod
             host_index += 1
 
     # Run threads on hosts
@@ -182,6 +196,7 @@ def main():
                 hosts=network.hosts,
                 publishers = parsed_args.publishers,
                 subscribers = parsed_args.subscribers,
+                ratio = parsed_args.ratio,
                 broker_mode = parsed_args.broker_mode,
                 executions = parsed_args.executions,
                 record_time = parsed_args.record_time,
@@ -193,6 +208,7 @@ def main():
                 hosts=network.hosts,
                 publishers = parsed_args.publishers,
                 subscribers = parsed_args.subscribers,
+                ratio = parsed_args.ratio,
                 broker_mode = parsed_args.broker_mode,
                 executions = parsed_args.executions,
                 record_time = parsed_args.record_time,
