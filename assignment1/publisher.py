@@ -21,7 +21,9 @@ parser.add_argument ("-t", "--topic", type=str, default="zipcode temperature rel
 parser.add_argument ("-s", "--srv_addr", type=str, default="localhost", help="Server Address")
 parser.add_argument ("-b", "--broker_mode", default=False, action="store_true")
 parser.add_argument ("-z", "--zip_code", type=str, default="10001", help="Zip Code")
-parser.add_argument("-e", "--executions", type=int, default=20, help="Number of executions for the program")
+parser.add_argument ( "-e", "--executions", type=int, default=20, help="Number of executions for the program")
+parser.add_argument ("-r", "--record_time", default=False, action="store_true")
+parser.add_argument ("-d", "--record_dir", type=str, default="timing_data", help="Directory to store timing data")
 args = parser.parse_args ()
 
 #srv_addr = sys.argv[2] if len(sys.argv) > 2 else "localhost"
@@ -43,9 +45,16 @@ zip_code = int(args.zip_code)
 topic = args.topic
 
 if not broker_mode:
-	register_pub(topic)
+    register_pub(topic)
 else:
-	register_pub_with_broker(srv_addr, topic)
+    register_pub_with_broker(srv_addr, topic)
+
+if args.record_time:
+    if not os.path.isdir(args.record_dir):
+        os.mkdir(args.record_dir)
+    f = open(f"{args.record_dir}/pub_{zip_filter}.dat",wr)
+    f.write(datetime.now().time())
+
 
 # keep publishing
 messages_published = 0
@@ -67,7 +76,7 @@ while messages_to_publish > messages_published:
 
     print("Trying to publish")
     if not broker_mode:
-	    publish(topic, data, datetime.datetime.utcnow().timestamp())
+        publish(topic, data, datetime.datetime.utcnow().timestamp())
     else:
         publish_to_broker(topic, data, messages_published, datetime.datetime.utcnow().timestamp())
     time.sleep(0.5)

@@ -36,6 +36,9 @@ def parse_args():
 
     parser.add_argument("-b", "--broker_mode", default=False, action="store_true")
 
+    parser.add_argument ("-w", "--record_time", default=False, action="store_true")
+    parser.add_argument ("-d", "--record_dir", type=str, default="timing_data", help="Directory to store timing data")
+    
     # parse the args
     args = parser.parse_args()
 
@@ -44,7 +47,7 @@ def parse_args():
     return args
 
 
-def execute(output_dir, hosts, publishers, subscribers, broker_mode = False, executions=20):
+def execute(output_dir, hosts, publishers, subscribers, broker_mode = False, executions=20, record_time = False, record_dir):
 
     commands = []
 
@@ -57,13 +60,13 @@ def execute(output_dir, hosts, publishers, subscribers, broker_mode = False, exe
         commands.append(f"python3 ./broker.py")
         # Allocate commands for publishers and subscribers
         for i in range(publishers):
-            commands.append(f"python3 ./publisher.py -s 10.0.0.1 -z 1010{zip_holder} -b -e {executions} &> {output_dir}{hosts[host_index].name}.out")
+            commands.append(f"python3 ./publisher.py -s 10.0.0.1 -z 1010{zip_holder} -b -e {executions} -d -w {record_time} -d {record_dir} &> {output_dir}{hosts[host_index].name}.out")
             zip_holder += 1
             host_index += 1
 
         zip_holder = 1
         for i in range(subscribers):
-            commands.append(f"python3 ./subscriber.py -s 10.0.0.1 -z 1010{zip_holder} -b -e {executions} &> {output_dir}{hosts[host_index].name}.csv")
+            commands.append(f"python3 ./subscriber.py -s 10.0.0.1 -z 1010{zip_holder} -b -e {executions} -w {record_time} -d {record_dir} &> {output_dir}{hosts[host_index].name}.csv")
             zip_holder += 1
             host_index += 1
 
@@ -72,13 +75,13 @@ def execute(output_dir, hosts, publishers, subscribers, broker_mode = False, exe
         ip_holder = 1
         zip_holder = 1
         for i in range(publishers):
-            commands.append(f"python3 ./publisher.py -z 1010{zip_holder} -e {executions} &> {output_dir}{hosts[host_index].name}.out")
+            commands.append(f"python3 ./publisher.py -z 1010{zip_holder} -e {executions} -w {record_time} -d {record_dir} &> {output_dir}{hosts[host_index].name}.out")
             zip_holder += 1
             host_index += 1
 
         zip_holder = 1
         for i in range(subscribers):
-            commands.append(f"python3 ./subscriber.py -s 10.0.0.{ip_holder} -z 1010{zip_holder}  -e {executions} &> {output_dir}{hosts[host_index].name}.csv")
+            commands.append(f"python3 ./subscriber.py -s 10.0.0.{ip_holder} -z 1010{zip_holder}  -e {executions} -w {record_time} -d {record_dir} &> {output_dir}{hosts[host_index].name}.csv")
             ip_holder += 1
             zip_holder += 1
             host_index += 1
@@ -142,8 +145,6 @@ def main():
                 subscribers = parsed_args.subscribers,
                 broker_mode = parsed_args.broker_mode,
                 executions = parsed_args.executions)
-
-
 
 
     print("Deactivating Network")

@@ -1,6 +1,7 @@
 import argparse
 import sys
 import zmq
+from datetime import datetime
 
 from zmq_api import (
     listen,
@@ -13,7 +14,9 @@ parser.add_argument ("-t", "--topic", type=str, default="zipcode temperature rel
 parser.add_argument ("-s", "--srv_addr", type=str, default="localhost", help="Server Address")
 parser.add_argument ("-b", "--broker_mode", default=False, action="store_true")
 parser.add_argument ("-z", "--zip_code", type=str, default="10001", help="Zip Code")
-parser.add_argument("-e", "--executions", type=int, default=20, help="Number of executions for the program")
+parser.add_argument ("-e", "--executions", type=int, default=20, help="Number of executions for the program")
+parser.add_argument ("-w", "--record_time", default=False, action="store_true")
+parser.add_argument ("-d", "--record_dir", type=str, default="timing_data", help="Directory to store timing data")
 args = parser.parse_args ()
 
 #  Socket to talk to server
@@ -44,9 +47,9 @@ print("Subscribing to {zip_filter}")
 #broker_mode = int(sys.argv[3]) if len(sys.argv) > 3 else 0
 broker_mode = args.broker_mode
 if not broker_mode:
-	register_sub(srv_addr, zip_filter)
+    register_sub(srv_addr, zip_filter)
 else:
-	register_sub_with_broker(srv_addr, zip_filter)
+    register_sub_with_broker(srv_addr, zip_filter)
 
 # Process 10 updates
 total_temp = 0
@@ -58,3 +61,10 @@ for update_nbr in range(10):
       #zip_filter, total_temp / (update_nbr+1))
     #)
     print(f"Average temperature for zipcode {zip_filter} was {total_temp/ (update_nbr+1)}")
+
+if args.record_time:
+    if not os.path.isdir(args.record_dir):
+        os.mkdir(args.record_dir)
+    f = open(f"{args.record_dir}/sub_{zip_filter}.dat",wr)
+    f.write(datetime.now().time())
+
