@@ -33,9 +33,13 @@ def parse_args():
     parser.add_argument("-p", "--publishers", type=int, default=2, help="Number of publishers, default 2, minimum is number of topics")
     parser.add_argument("-r", "--racks", type=int, default=1, help="Number of racks, choices 1, 2 or 3")
     parser.add_argument("-e", "--executions", type=int, default=20, help="Number of executions for the program")
+    parser.add_argument("-f", "--ratio", type=float, default=1, help="Ratio of subscribers to publishers.")
 
     parser.add_argument("-b", "--broker_mode", default=False, action="store_true")
 
+    parser.add_argument("-w", "--record_time", default=False, action="store_true")
+    parser.add_argument("-d", "--record_dir", type=str, default="timing_data", help="Directory to store timing data")
+    
     # parse the args
     args = parser.parse_args()
 
@@ -44,56 +48,122 @@ def parse_args():
     return args
 
 
-def execute(output_dir, hosts, publishers, subscribers, broker_mode = False, executions=20):
+def execute(output_dir, hosts, publishers, subscribers, ratio, broker_mode = False, executions=20, record_time = False, record_dir = "timing_data"):
+
+    pub_commands = []
+    pub_hosts = []
+    sub_commands = []
+    sub_hosts = []
+    broker_commands = []
 
     commands = []
 
+    zipcode = 10101
+
+    pub_mod = 1
+    sub_mod = 1
+
+    if ratio > 1:
+        sub_mod = 1/ratio
+    else:
+        pub_mod = ratio
 
     if broker_mode:
-        host_index = 0
+        host_index = 1
         ip_holder = 1
-        zip_holder = 1
+        zipcode = float(10101)
         # Allocate first host as broker
-        commands.append(f"python3 ./broker.py")
+        #commands.append(f"python3 ./broker.py")
+        broker_commands.append(f"python3 ./broker.py")
         # Allocate commands for publishers and subscribers
         for i in range(publishers):
-            commands.append(f"python3 ./publisher.py -s 10.0.0.1 -z 1010{zip_holder} -b -e {executions} &> {output_dir}{hosts[host_index].name}.out")
-            zip_holder += 1
-            host_index += 1
+            zip_holder = int(zipcode)
+            pub_commands.append(f"python3 ./publisher.py -s 10.0.0.1 -z {zip_holder} -b -e {executions} -w -d {output_dir}{record_dir} &> {output_dir}{hosts[host_index].name}.out")
+            pub_hosts.append(hosts[host_index])
+            zipcode += 1 * pub_mod
+            host_index += 1     
 
-        zip_holder = 1
+        zipcode = float(10101)
         for i in range(subscribers):
-            commands.append(f"python3 ./subscriber.py -s 10.0.0.1 -z 1010{zip_holder} -b -e {executions} &> {output_dir}{hosts[host_index].name}.csv")
-            zip_holder += 1
+            zip_holder = int(zipcode)
+            sub_commands.append(f"python3 ./subscriber.py -s 10.0.0.1 -z {zip_holder} -b -e {executions} -i {i} -w -d {output_dir}{record_dir} &> {output_dir}{hosts[host_index].name}.out")
+            sub_hosts.append(hosts[host_index])
+            zipcode += 1 * sub_mod
             host_index += 1
+            # Cycle the zipcode if need be
+            if int(zipcode) % publishers == 0:
+                zipcode = float(10101)
 
     else:
         host_index = 0
-        ip_holder = 1
-        zip_holder = 1
+        ip_end = float(1)
+        zipcode = float(10101)
         for i in range(publishers):
-            commands.append(f"python3 ./publisher.py -z 1010{zip_holder} -e {executions} &> {output_dir}{hosts[host_index].name}.out")
-            zip_holder += 1
+            zip_holder = int(zipcode)
+            #commands.append(f"python3 ./publisher.py -z {zip_holder} -e {executions} -w -d {output_dir}{record_dir} &> {output_dir}{hosts[host_index].name}.out")
+            pub_commands.append(f"python3 ./publisher.py -z {zip_holder} -e {executions} -w -d {output_dir}{record_dir} &> {output_dir}{hosts[host_index].name}.out")
+            pub_hosts.append(hosts[host_index])
+            zipcode += 1 * pub_mod
             host_index += 1
 
-        zip_holder = 1
+        zipcode = float(10101)
         for i in range(subscribers):
-            commands.append(f"python3 ./subscriber.py -s 10.0.0.{ip_holder} -z 1010{zip_holder}  -e {executions} &> {output_dir}{hosts[host_index].name}.csv")
-            ip_holder += 1
-            zip_holder += 1
+            ip_holder = int(ip_end)
+            zip_holder = int(zipcode)
+            #commands.append(f"python3 ./subscriber.py -s 10.0.0.{ip_holder} -z {zip_holder} -e {executions} -w -d {output_dir}{record_dir} &> {output_dir}{hosts[host_index].name}.csv")
+            sub_commands.append(f"python3 ./subscriber.py -s 10.0.0.{ip_holder} -z {zip_holder} -e {executions} -i {i} -w -d {output_dir}{record_dir} &> {output_dir}{hosts[host_index].name}.csv")
+            sub_hosts.append(hosts[host_index])
+            ip_end += 1 / ratio
+            zipcode += 1 * sub_mod
             host_index += 1
+            # Cycle the zipcode and the ip_end if need be
+            if int(zipcode) % publishers == 0:
+                zipcode = float(10101)
+                ip_end = float(1)
 
     # Run threads on hosts
     host_threads = []
-    for i in range(len(hosts)-1):
-        print(f"Call command {commands[i]} on {hosts[i]}")
-        thread = threading.Thread(target=hosts[i].cmdPrint, args=(commands[i],))
-        thread.start()
-        host_threads.append(thread)
+    host_names = []
+    hosts_in_use = 0
+    pubs_running = 0
+    subs_running = 0
+    hosts_to_run = len(sub_commands)+len(pub_commands)
+    if broker_mode:
+        hosts_to_run = hosts_to_run + 1
 
-    for i in range(len(hosts)-1):
+    while hosts_in_use < hosts_to_run:
+        print(f"Hosts to run: {hosts_to_run}, hosts in use: {hosts_in_use}")
+        if broker_mode and hosts_in_use == 0    :
+            print(f"Call command {broker_commands[0]} on {hosts[hosts_in_use]}")
+            thread = threading.Thread(target=hosts[0].cmdPrint, args=(broker_commands[0],))
+            thread.start()
+            host_threads.append(thread)
+            host_names.append(hosts[hosts_in_use].name)
+            hosts_in_use = hosts_in_use + 1
+
+        if subs_running < len(sub_commands):
+            print(f"Call command {sub_commands[subs_running]} on {sub_hosts[subs_running]}")
+            #thread = threading.Thread(target=hosts[i].cmdPrint, args=(commands[i],))
+            thread = threading.Thread(target=sub_hosts[subs_running].cmdPrint, args=(sub_commands[subs_running],))
+            thread.start()
+            host_threads.append(thread)
+            host_names.append(sub_hosts[subs_running].name)
+            subs_running = subs_running + 1
+            hosts_in_use = hosts_in_use + 1
+
+        if pubs_running < len(pub_commands):
+            print(f"Call command {pub_commands[pubs_running]} on {pub_hosts[pubs_running]}")
+            thread = threading.Thread(target=pub_hosts[pubs_running].cmdPrint, args=(pub_commands[pubs_running],))
+            thread.start()
+            host_threads.append(thread)
+            host_names.append(pub_hosts[pubs_running].name)
+            pubs_running = pubs_running + 1
+            hosts_in_use = hosts_in_use + 1
+
+
+    for i in range(hosts_in_use):
         if i > 0 or not broker_mode:
-            print(f"Wait for {hosts[i].name} to be done")
+            print(f"Wait for {host_names[i]} to be done")
             host_threads[i].join()
 
     if broker_mode:
@@ -131,8 +201,11 @@ def main():
                 hosts=network.hosts,
                 publishers = parsed_args.publishers,
                 subscribers = parsed_args.subscribers,
+                ratio = parsed_args.ratio,
                 broker_mode = parsed_args.broker_mode,
-                executions = parsed_args.executions)
+                executions = parsed_args.executions,
+                record_time = parsed_args.record_time,
+                record_dir = parsed_args.record_dir)
     else:
         print(f"{output_dir} does not exist")
         os.mkdir(output_dir)
@@ -140,10 +213,11 @@ def main():
                 hosts=network.hosts,
                 publishers = parsed_args.publishers,
                 subscribers = parsed_args.subscribers,
+                ratio = parsed_args.ratio,
                 broker_mode = parsed_args.broker_mode,
-                executions = parsed_args.executions)
-
-
+                executions = parsed_args.executions,
+                record_time = parsed_args.record_time,
+                record_dir = parsed_args.record_dir)
 
 
     print("Deactivating Network")
