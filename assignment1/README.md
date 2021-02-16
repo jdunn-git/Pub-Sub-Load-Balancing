@@ -9,10 +9,13 @@ The functionality of the assignment depends on vagrant. To operate the assignmen
 4. Here you can either run Broker Mode or Flood Mode. This is designated by the -b flag.
 The number of publishers and subscribers can be changed with the `-p` and `-s` respectivelly.
 In order to control testing, you can change the amount of executions with `e`
+You can also use the `-f` flag to set the ratio of subscribers to publishers. By default, this ratio of 1.
+> Note that you need to consider the pub and sub count if using -f. If you want multiple publishers to send to the same subscriber, you can set `-f` to 0.5, but you also need to make sure `-s` is at least half of `-p`.
 
-Broker Mode: `sudo python3 /vagrant/assignment_executor.py -s 5 -p 5 -b -e 20`
+Broker Mode: `sudo python3 /vagrant/assignment_executor.py -s 5 -p 5 -f 1 -b -e 20`
 
-Flood Mode: `sudo python3 /vagrant/assignment_executor.py -s 5 -p 5 -e 20`
+Flood Mode: `sudo python3 /vagrant/assignment_executor.py -s 5 -p 5 -f 1 -e 20`
+
 
 ## Timing Experiments
 To time it, add a couple of new parameters to the executable like so: `sudo python3 /vagrant/assignment_executor.py -s 5 -p 5 -b -e 20 -w -d "test_1"`
