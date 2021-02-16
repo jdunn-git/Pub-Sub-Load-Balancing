@@ -52,6 +52,12 @@ if not broker_mode:
 else:
     register_sub_with_broker(srv_addr, zip_filter)
 
+f = None
+if args.record_time:
+    if not os.path.isdir(args.record_dir):
+        os.mkdir(args.record_dir)
+    f = open(f"{args.record_dir}/sub_{zip_filter}.dat","a")
+
 # Process 10 updates
 total_temp = 0
 for update_nbr in range(10):
@@ -63,10 +69,13 @@ for update_nbr in range(10):
     #)
     print(f"Average temperature for zipcode {zip_filter} was {total_temp/ (update_nbr+1)}")
 
-if args.record_time:
-    if not os.path.isdir(args.record_dir):
-        os.mkdir(args.record_dir)
-    f = open(f"{args.record_dir}/sub_{zip_filter}.dat","a")
-    f.write(str(datetime.datetime.utcnow().timestamp())+'\n')
+    if f != None:
+        data = f"{zipcode} {temperature} {relhumidity}"
+        timestamp = str(datetime.datetime.utcnow().timestamp())
+        f.write(f"{data} {timestamp}\n")
+
+
+if f != None:
     f.close()
+
 

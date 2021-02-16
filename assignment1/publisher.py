@@ -50,12 +50,11 @@ if not broker_mode:
 else:
     register_pub_with_broker(srv_addr, topic)
 
+f = None
 if args.record_time:
     if not os.path.isdir(args.record_dir):
         os.mkdir(args.record_dir)
     f = open(f"{args.record_dir}/pub_{zip_code}.dat","a")
-    f.write(str(datetime.datetime.utcnow().timestamp())+'\n')
-    f.close()
 
 # keep publishing
 messages_published = 0
@@ -76,9 +75,17 @@ while messages_to_publish > messages_published:
     #socket.send_string("%i %i %i" % (int(zipcode), temperature, relhumidity))
 
     print("Trying to publish")
+
+    if f != None:
+        timestamp = str(datetime.datetime.utcnow().timestamp())
+        f.write(f"{data} {timestamp}\n")
+
     if not broker_mode:
         publish(topic, data, datetime.datetime.utcnow().timestamp())
     else:
         publish_to_broker(topic, data, messages_published, datetime.datetime.utcnow().timestamp())
     time.sleep(0.5)
     messages_published += 1
+
+if f != None:
+    f.close()
