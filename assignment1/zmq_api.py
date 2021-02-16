@@ -32,10 +32,10 @@ sub_port = 5556
 ## Functions for publisher communication ##
 
 # Registers publisher
-def register_pub(ip, topic):
-	pub_socket.bind("tcp://%s:5556" % ip)
+def register_pub(topic):
+	pub_socket.bind("tcp://*:5556")
 	pub_dict[topic] = pub_socket
-	print("Registered pub on tcp://%s:5556" % ip)
+	print("Registered pub on tcp://*:5556")
 
 # Publishes data for the publisher based on the registered topic
 def publish(topic, value):
@@ -66,8 +66,8 @@ def listen(topic):
 
 ## Functions for broker communication ##
 
-# Registers the broker send and receive socks: 1. to get notified of all active pubs and subs, 
-# 2. to receive published messages, and 3. to send published messages to the subscribers 
+# Registers the broker send and receive socks: 1. to get notified of all active pubs and subs,
+# 2. to receive published messages, and 3. to send published messages to the subscribers
 def register_broker():
 	pub_listener_socket.bind("tcp://*:5554")
 
@@ -145,9 +145,9 @@ def listen_for_sub_registration():
 	sub_listener_socket.send_string(str(resp))
 
 
-def publish_to_broker(topic, value):
+def publish_to_broker(topic, value, message_number):
 	pub_dict.get(topic).send_string(value)
-	print("Sending Data")
+	print(f"Sending Data number {message_number}")
 	resp = pub_dict.get(topic).recv()
 	if resp == "OK":
 		print("Published data to the broker")
@@ -225,5 +225,3 @@ def publish_to_sub(data):
 #
 #
 #
-
-

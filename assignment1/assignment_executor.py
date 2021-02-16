@@ -32,7 +32,7 @@ def parse_args():
     parser.add_argument("-s", "--subscribers", type=int, default=10, help="Number of subscribers, default 10, minimum is number of topics")
     parser.add_argument("-p", "--publishers", type=int, default=2, help="Number of publishers, default 2, minimum is number of topics")
     parser.add_argument("-r", "--racks", type=int, default=1, help="Number of racks, choices 1, 2 or 3")
-    parser.add_argument("-c", "--clean_state", default=False, action="store_true")
+    parser.add_argument("-e", "--executions", type=int, default=20, help="Number of executions for the program")
 
     parser.add_argument("-b", "--broker_mode", default=False, action="store_true")
 
@@ -44,7 +44,7 @@ def parse_args():
     return args
 
 
-def execute(output_dir, hosts, publishers, subscribers, broker_mode = False):
+def execute(output_dir, hosts, publishers, subscribers, broker_mode = False, executions=20):
 
     commands = []
     host_index = 0
@@ -56,7 +56,7 @@ def execute(output_dir, hosts, publishers, subscribers, broker_mode = False):
         commands.append(f"python3 ./broker.py")
         # Allocate commands for publishers and subscribers
         for i in range(publishers):
-            commands.append(f"python3 ./publisher.py -s 10.0.0.1 -z 1010{zip_holder} -b &> {output_dir}{hosts[host_index].name}.out")
+            commands.append(f"python3 ./publisher.py -s 10.0.0.1 -z 1010{zip_holder} -b -e {executions} &> {output_dir}{hosts[host_index].name}.out")
             zip_holder += 1
 
         zip_holder = 1
@@ -66,12 +66,13 @@ def execute(output_dir, hosts, publishers, subscribers, broker_mode = False):
 
     else:
         for i in range(publishers):
-            commands.append(f"python3 ./publisher.py -s 10.0.0.1 -z 1010{zip_holder} &> {output_dir}{hosts[host_index].name}.out")
+            commands.append(f"python3 ./publisher.py -z 1010{zip_holder} -e {executions} &> {output_dir}{hosts[host_index].name}.out")
             zip_holder += 1
 
         zip_holder = 1
         for i in range(subscribers):
-            commands.append(f"python3 ./subscriber.py -s 10.0.0.1 -z 1010{zip_holder} &> {output_dir}{hosts[host_index].name}.csv")
+            commands.append(f"python3 ./subscriber.py -s 10.0.0.{ip_holder} -z 1010{zip_holder} &> {output_dir}{hosts[host_index].name}.csv")
+            ip_holder += 1
             zip_holder += 1
 
     # Run threads on hosts
@@ -122,7 +123,8 @@ def main():
                 hosts=network.hosts,
                 publishers = parsed_args.publishers,
                 subscribers = parsed_args.subscribers,
-                broker_mode = parsed_args.broker_mode)
+                broker_mode = parsed_args.broker_mode,
+                executions = parsed_args.executions)
         print(f"{output_dir} does not exist")
 
     print("Deactivating Network")
