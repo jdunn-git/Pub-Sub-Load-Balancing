@@ -13,6 +13,7 @@ parser.add_argument ("-t", "--topic", type=str, default="zipcode temperature rel
 parser.add_argument ("-s", "--srv_addr", type=str, default="localhost", help="Server Address")
 parser.add_argument ("-b", "--broker_mode", default=False, action="store_true")
 parser.add_argument ("-z", "--zip_code", type=str, default="10001", help="Zip Code")
+parser.add_argument("-e", "--executions", type=int, default=20, help="Number of executions for the program")
 args = parser.parse_args ()
 
 #  Socket to talk to server

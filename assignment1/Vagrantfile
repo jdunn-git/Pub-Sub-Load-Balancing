@@ -74,7 +74,7 @@ Vagrant.configure("2") do |config|
   mkdir -p /tmp/assignment_output/
 SCRIPT
 config.vm.provision "shell", inline: $script, privileged: false
-config.vm.synced_folder "/tmp/assignment_output", "/tmp/assignment_output"
+#config.vm.synced_folder "/tmp/assignment_output", "/tmp/assignment_output"
 end
 
 #ansible cloudvm -m ping -u cc

@@ -63,7 +63,7 @@ def execute(output_dir, hosts, publishers, subscribers, broker_mode = False, exe
 
         zip_holder = 1
         for i in range(subscribers):
-            commands.append(f"python3 ./subscriber.py -s 10.0.0.1 -z 1010{zip_holder} -b &> {output_dir}{hosts[host_index].name}.csv")
+            commands.append(f"python3 ./subscriber.py -s 10.0.0.1 -z 1010{zip_holder} -b -e {executions} &> {output_dir}{hosts[host_index].name}.csv")
             zip_holder += 1
             host_index += 1
 
@@ -78,7 +78,7 @@ def execute(output_dir, hosts, publishers, subscribers, broker_mode = False, exe
 
         zip_holder = 1
         for i in range(subscribers):
-            commands.append(f"python3 ./subscriber.py -s 10.0.0.{ip_holder} -z 1010{zip_holder} &> {output_dir}{hosts[host_index].name}.csv")
+            commands.append(f"python3 ./subscriber.py -s 10.0.0.{ip_holder} -z 1010{zip_holder}  -e {executions} &> {output_dir}{hosts[host_index].name}.csv")
             ip_holder += 1
             zip_holder += 1
             host_index += 1
