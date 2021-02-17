@@ -41,3 +41,41 @@ We can run additional tests and increment the -d directoy name, and the output w
 ![](https://github.com/jdunn-git/CS6381-Assignment-1/blob/master/assignment1/assignment_output/images/P10_S200_Flood.png)
 ![](https://github.com/jdunn-git/CS6381-Assignment-1/blob/master/assignment1/assignment_output/images/P200_S10_Broker.png)
 ![](https://github.com/jdunn-git/CS6381-Assignment-1/blob/master/assignment1/assignment_output/images/P200_S10_Flood.png)
+
+
+#### Assignment 1 Preparation: Joshua Dunn and Terrence Williams
+* Git creation
+* Git Readme initiated
+* Assignment read through and requirements noted
+
+#### Assignment Environment Setup: Terrence Williams
+* Vagrant
+* Tool installation
+* Library Download
+* Vagrant Automation
+
+#### ZeroMQ Framework Study: Terrence Williams
+* Utilized Async material
+* ZeroMQ site
+* Scaffolding
+
+#### Pub/Sub Model: Joshua Dunn
+* Async material
+
+#### Flooder: Joshua Dunn
+* Implemented the flooder architecture with time tracking
+* Iimplemented Flooder with data capture
+
+#### Broker: Joshua Dunn
+* Implemented the broker architecture.
+
+#### Unit Test utilizing mininet: Joshua Dunn
+* Set up the data collection from a variety of use case scenarios
+
+#### Data Analytics: Terrence Williams
+* Unit test data munging
+* Data cleaning and analysis
+
+#### Video Presentation and Documentation: Joshua Dunn and Terrence Williams
+* Setup Graphs on readme
+* Created the submission video
