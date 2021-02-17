@@ -30,3 +30,13 @@ We can run additional tests and increment the -d directoy name, and the output w
 
 # Performance and Unit Test Results:
 ![](https://github.com/jdunn-git/CS6381-Assignment-1/blob/master/assignment1/assignment_output/images/stats.png)
+![](https://github.com/jdunn-git/CS6381-Assignment-1/blob/master/assignment1/assignment_output/images/P100_S10_Broker.png)
+![](https://github.com/jdunn-git/CS6381-Assignment-1/blob/master/assignment1/assignment_output/images/P100_S10_Flood.png)
+![](https://github.com/jdunn-git/CS6381-Assignment-1/blob/master/assignment1/assignment_output/images/P10_S100_Broker.png)
+![](https://github.com/jdunn-git/CS6381-Assignment-1/blob/master/assignment1/assignment_output/images/P10_S100_Flood.png)
+![](https://github.com/jdunn-git/CS6381-Assignment-1/blob/master/assignment1/assignment_output/images/P10_S10_Broker.png)
+![](https://github.com/jdunn-git/CS6381-Assignment-1/blob/master/assignment1/assignment_output/images/P10_S10_Flood.png)
+![](https://github.com/jdunn-git/CS6381-Assignment-1/blob/master/assignment1/assignment_output/images/P10_S200_Broker.png)
+![](https://github.com/jdunn-git/CS6381-Assignment-1/blob/master/assignment1/assignment_output/images/P10_S200_Flood.png)
+![](https://github.com/jdunn-git/CS6381-Assignment-1/blob/master/assignment1/assignment_output/images/P200_S10_Broker.png)
+![](https://github.com/jdunn-git/CS6381-Assignment-1/blob/master/assignment1/assignment_output/images/P200_S10_Flood.png)
