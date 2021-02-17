@@ -28,7 +28,7 @@ We can run additional tests and increment the -d directoy name, and the output w
 
 > Note that the csv structure is: [test_name], [pub-sub pair 1 time difference 1], [pub-sub pair 1 time difference 2], ..., [pub-sub pair n time difference m], where n is the number of pub-sub pairs, and m is the number of messages received by the subscribers
 
-# Performance and Unit Test Results:
+## Performance and Unit Test Results:
 ![](https://github.com/jdunn-git/CS6381-Assignment-1/blob/master/assignment1/assignment_output/images/stats.png)
 
 ![](https://github.com/jdunn-git/CS6381-Assignment-1/blob/master/assignment1/assignment_output/images/P100_S10_Broker.png)
@@ -42,40 +42,40 @@ We can run additional tests and increment the -d directoy name, and the output w
 ![](https://github.com/jdunn-git/CS6381-Assignment-1/blob/master/assignment1/assignment_output/images/P200_S10_Broker.png)
 ![](https://github.com/jdunn-git/CS6381-Assignment-1/blob/master/assignment1/assignment_output/images/P200_S10_Flood.png)
 
+## Assignment Work Distribution
 
-#### Assignment 1 Preparation: Joshua Dunn and Terrence Williams
+#### Assignment 1 Preparation: Joshua Dunn and Terrence Williams (30 minutes)
 * Git creation
 * Git Readme initiated
 * Assignment read through and requirements noted
 
-#### Assignment Environment Setup: Terrence Williams
+#### Assignment Environment Setup: Terrence Williams (2 hours)
 * Vagrant
 * Tool installation
 * Library Download
 * Vagrant Automation
 
-#### ZeroMQ Framework Study: Terrence Williams
+#### ZeroMQ Framework Study: Terrence Williams (1 hou)r
 * Utilized Async material
 * ZeroMQ site
 * Scaffolding
 
-#### Pub/Sub Model: Joshua Dunn
-* Async material
+#### Pub/Sub Model: Joshua Dunn (3 hours)
 
-#### Flooder: Joshua Dunn
+#### Flooder: Joshua Dunn (3 hours)
 * Implemented the flooder architecture with time tracking
 * Iimplemented Flooder with data capture
 
-#### Broker: Joshua Dunn
+#### Broker: Joshua Dunn (3 hours)
 * Implemented the broker architecture.
 
-#### Unit Test utilizing mininet: Joshua Dunn
+#### Unit Test utilizing mininet: Joshua Dunn (2 hours)
 * Set up the data collection from a variety of use case scenarios
 
-#### Data Analytics: Terrence Williams
+#### Data Analytics: Terrence Williams (1 hour)
 * Unit test data munging
 * Data cleaning and analysis
 
-#### Video Presentation and Documentation: Joshua Dunn and Terrence Williams
+#### Video Presentation and Documentation: Joshua Dunn and Terrence Williams (1 hour)
 * Setup Graphs on readme
 * Created the submission video
