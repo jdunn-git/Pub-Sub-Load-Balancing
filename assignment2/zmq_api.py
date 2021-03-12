@@ -5,6 +5,7 @@ import zmq
 context = zmq.Context()
 
 pub_dict = dict()
+pub_topic_filter_dict = dict()
 sub_dict = dict()
 sub_port_dict = dict()
 
@@ -15,6 +16,7 @@ broker_receive_socket = context.socket(zmq.SUB)
 broker_send_socket = context.socket(zmq.PUB)
 
 pub_listener_socket = context.socket(zmq.REP)
+pub_discovery_socket = context.socket(zmq.REP)
 sub_listener_socket = context.socket(zmq.REP)
 
 pub_broker_socket = context.socket(zmq.REQ)
@@ -69,6 +71,8 @@ def listen(topic):
 # Registers the broker send and receive socks: 1. to get notified of all active pubs and subs,
 # 2. to receive published messages, and 3. to send published messages to the subscribers
 def register_broker():
+	pub_discovery_socket.bind("tcp://*:5553")
+
 	pub_listener_socket.bind("tcp://*:5554")
 
 	sub_listener_socket.bind("tcp://*:5555")
@@ -99,6 +103,19 @@ def register_sub_with_broker(ip, topic_filter):
 	sub_socket.setsockopt_string(zmq.SUBSCRIBE, topic_filter)
 	sub_dict[topic_filter] = sub_socket
 
+def listen_for_pub_discovery_req():
+	req = pub_discovery_socket.recv()
+	if isinstance(req, bytes):
+		req = req.decode("ascii")
+	print("Got a publisher discovery request: %s" % req)
+	_,  _, topic_filter = req.split(' ')
+
+	if pub_topic_filter_dict.get(topic_filter) != None:
+		# TODO: Enable this to message to send multiple pubs 
+		pub_discovery_socket.send_string(pub_topic_filter_dict.get(topic_filter)[0])
+	else:
+		# TODO: Enable subs to be waiting for pubs, so this wont return a 404
+		pub_discovery_socket.send_string("404")
 
 
 def listen_for_pub_registration():
@@ -175,53 +192,20 @@ def publish_to_sub(data):
 
 
 
-#def notify(topic, value):
-#	if sub_dict.get(topic) != None:
 
-
-
-
-
-
-### Beavior Breakdown: ###
 #
+# TODO:
 #
-# Publishers will:
-#	Register an ip/topic to get a socket
-#	Publish data on that ip based on that topic
-#	Don't care about broker or no broker - only difference will be the broker ip or the flood ip ("*")
-#
-#
-# Subscribers will:
-#   Register a socket for receiving
-#   Register with a filter so they'll only get data that matches
-#   Listen for data
-#   Don't care about broker or no broker - only different will be if they send the broker ip or the flood ip ("*") (assuming the flood works for brokerless receiving)
-#
-#
-# Broker will:
-#	Register a sub socket to be informed about incoming publishers - pub ip and topic
-#	Register a sub socket to be informed about incoming subscribers - sub ip and topic
-#	Register an sub socket to get data from each publisher
-#   Register an pbv socket to send data to each subscriber
-#	Keep track of all pubs + topics
-#	When forwarding to subs, it should use the topic it gets from the pub, and look up subs that filter on that
-#	Then send to each of those subs
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
+# 1. Make broker run always
+# 2. Let broker have a normal and a "discovery" mode
+#	> This will require req-rep sockets for pub and sub registration
+#	> Also need to be aware of topics for sub registration now
+#	> This may also require moving to an XSUB socket for subs, but I'm not sure 
+# 3. Make "heartbeat" requests in "discovery" mode to verify if pubs are still active,
+#	and remove them if they don't respond	
+# 	> Better yet, let the sub connecting to the pub be the "heartbeat", so that if
+#		that request fails, it comes back to the broker and tells it about that
+# 4. Connect broker to zookeeper, and add leader selection
+# 5. Connect pub and sub to zookeeper to find broker leader
+# 6. Update automated scripts for broker to be always on
 #
