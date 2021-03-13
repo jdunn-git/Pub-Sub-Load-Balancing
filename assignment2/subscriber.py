@@ -5,6 +5,7 @@ import os
 import datetime
 
 from zmq_api import (
+    discover_publishers,
     listen,
     register_sub,
     register_sub_with_broker
@@ -49,7 +50,8 @@ print("Subscribing to {zip_filter}")
 #broker_mode = int(sys.argv[3]) if len(sys.argv) > 3 else 0
 broker_mode = args.broker_mode
 if not broker_mode:
-    register_sub(srv_addr, zip_filter)
+    pub_ips = discover_publishers(srv_addr, zip_filter)
+    register_sub(pub_ips, zip_filter)
 else:
     register_sub_with_broker(srv_addr, zip_filter)
 

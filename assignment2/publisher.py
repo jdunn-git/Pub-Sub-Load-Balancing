@@ -11,7 +11,6 @@ from zmq_api import (
     publish_to_broker,
     register_pub,
     register_pub_with_broker,
-
 )
 
 print(f"Current libzmq version is {zmq.zmq_version()}")

@@ -23,14 +23,9 @@ def register_subs():
 
 
 def register_pubs():
-	# Listen for new pubs entering the system
-	#string = listen_for_pub_registration()
-
-	#_, ip, _, topic = string.split()
-
-	# Start new thread listening for data from this pub
-	_thread.start_new_thread(receive_pub_data, ())
-
+	while True:
+		# Listen for new subs to come onto the system
+		listen_for_pub_registration()
 
 def receive_pub_data():
 	# Get the pub message
@@ -45,6 +40,9 @@ register_broker()
 
 # Start new listener for subs
 _thread.start_new_thread(register_subs, ())
+
+# Start new listener for pubs
+_thread.start_new_thread(register_pubs, ())
 
 
 while True:
