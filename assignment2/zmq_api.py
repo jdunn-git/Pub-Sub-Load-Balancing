@@ -6,6 +6,8 @@ import ipaddress
 import time
 from threading import Lock, Thread
 
+import zmq_api_zkclient
+
 #  Socket to talk to server
 context = zmq.Context()
 
@@ -448,6 +450,15 @@ def get_local_ip():
                 if not address_object.is_loopback:
                     print(address_info)
                     return address_info['addr']
+
+
+## Functions for zookeeper client ##
+
+def createnode():
+
+	driver = ZK_Driver
+	driver.init_driver()
+	driver.run_driver()
 
 
 #
