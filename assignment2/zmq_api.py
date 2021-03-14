@@ -544,11 +544,13 @@ def discover_broker():
 # UPDATE: Heartbeat is working, and pubs can drop off the system now without it breaking the new publisher discovery paths
 # 
 # 4. Connect broker to zookeeper, and add leader selection
-# Update: Broker connects to zookeeper, but leader election still needs to be added
+# UPDATE: Broker connects to zookeeper, but leader election still needs to be added
 #
 # 5. Connect pub and sub to zookeeper to find broker leader
-# Update: Pubs and Subs connects to zookeeper, but params need to be adjusted to intake the
+# UPDATE: Pubs and Subs connects to zookeeper, but params need to be adjusted to intake the
 #		> zookeeper node ip instead of the broker ip (or, we could do both and have different params)
+#		> Also, need to register the pubs and subs to zk so that new brokers can pick up where the old
+#			broker left off.
 #
 # 6. Update automated scripts for broker to be always on
 #
