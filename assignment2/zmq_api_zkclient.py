@@ -211,3 +211,75 @@ class ZK_Driver ():
         except:
             print("Exception thrown checking for exists/set: ", sys.exc_info()[0])
             return
+
+    # -----------------------------------------------------------------------
+    # -----------------------------------------------------------------------
+    # -----------------------------------------------------------------------
+    # Run the driver
+    #
+    # We do a whole bunch of things to demonstrate the use of ZooKeeper
+    # Note that as you are trying this out, use the ZooKeeper CLI to verify
+    # that indeed these things are happening on the server (just as a validation)
+    # -----------------------------------------------------------------------
+    def run_driver (self):
+        """The actual logic of the driver program """
+        try:
+            # now start playing with the different CLI commands programmatically
+
+            # first step is to start a session
+            print ("\n")
+            input ("Starting Session with the ZooKeeper Server -- Press any key to continue")
+            self.start_session ()
+ 
+            # Next we demo the creation of a znode. Here we create an ephemeral node
+            print ("\n")
+            input ("Creating a znode -- Press any key to continue:")
+            self.create_znode ()
+
+            # next we demo retrieving a stored value at a znode. 
+            print ("\n")
+            input ("Obtain stored value -- Press any key to continue")
+            self.get_znode_value ()
+
+            # next we demo modifying the value stored at a znode
+            print ("\n")
+            input ("Modify stored value -- Press any key to continue")
+            self.modify_znode_value (b"bar2")
+
+            # next we demo retrieving a stored value at a znode. 
+            print ("\n")
+            input ("Obtain the modified stored value -- Press any key to continue")
+            self.get_znode_value ()
+
+            # now let us disconnect. Doing so should delete our znode because
+            # it is ephemeral
+            print ("\n")
+            input ("Disconnect from the server -- Press any key to continue")
+            self.stop_session ()
+
+            # start another session to see if the node magically comes back up
+            print ("\n")
+            input ("Starting new Session to the ZooKeeper Server -- Press any key to continue")
+            self.start_session ()
+ 
+            # now check if the znode still exists
+            print ("\n")
+            input ("check if the node still exists -- Press any key to continue")
+            if self.zk.exists (self.zkName):
+                print ("{} znode still exists -- not possible".format (self.zkName))
+            else:
+                print ("{} znode no longer exists as expected".format (self.zkName))
+
+            # disconnect once again
+            print ("\n")
+            input ("Disconnecting for the final time -- Press any key to continue")
+            self.stop_session ()
+
+            # cleanup
+            print ("\n")
+            input ("Cleaning up the handle -- Press any key to continue")
+            self.zk.close ()
+
+        except:
+            print("Exception thrown: ", sys.exc_info()[0])
+
