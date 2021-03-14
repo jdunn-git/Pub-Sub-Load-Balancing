@@ -286,7 +286,7 @@ class ZK_Driver ():
 
     ## Functions added for assignment 2
 
-    def add_node(self, name, value):
+    def add_node(self, name, value, persistent):
         # here we create a node just like we did via the CLI. But here we are
         # also showcasing the ephemeral attribute which means that the znode
         # will be deleted automatically by the server when the session is
@@ -296,7 +296,7 @@ class ZK_Driver ():
         # Note that we do not check here if the node already exists. If it does,
         # then we will get an exception
         print(f"Creating an ephemeral znode {name} with value {value}")
-        self.zk.create(name, value=value, ephemeral=True, makepath=True)
+        self.zk.create(name, value=value, ephemeral=not persistent, makepath=True)
 
         #except:
             #print("Exception thrown in create (): ", sys.exc_info()[0])
@@ -338,4 +338,44 @@ class ZK_Driver ():
 
         except:
             print("Exception thrown checking for exists/get: ", sys.exc_info()[0])
+            return
+
+    def get_node_if_exists(self, name):
+        try:
+
+            # Now we are going to check if the znode that we just created
+            # exists or not. Note that a watch can be set on create, exists
+            # and get/set methods
+            print ("Checking if {} exists".format(name))
+            if self.zk.exists (name):
+                print ("{} znode indeed exists; get value".format(name))
+
+                # Now acquire the value and stats of that znode
+                #value,stat = self.zk.get (self.zkName, watch=self.watch)
+                value,stat = self.zk.get (name)
+                print(("Details of znode {}: value = {}, stat = {}".format (name, value, stat)))
+                return value
+
+        except:
+            print("Exception thrown getting znode: ", sys.exc_info()[0])
+            return
+
+    def get_children(self, name):
+        try:
+
+            # Now we are going to check if the znode that we just created
+            # exists or not. Note that a watch can be set on create, exists
+            # and get/set methods
+            print ("Checking if {} exists".format(name))
+            if self.zk.exists (name):
+                print ("{} znode indeed exists; get value".format(name))
+
+                # Now acquire the value and stats of that znode
+                #value,stat = self.zk.get (self.zkName, watch=self.watch)
+                value = self.zk.get_children(name)
+                print(("Details of znode {}: value = {}".format (name, value)))
+                return value
+
+        except:
+            print("Exception thrown getting children of znode: ", sys.exc_info()[0])
             return

@@ -303,7 +303,6 @@ def discover_publishers(ip, topic):
 		print("No publishers for now")
 		return []
 
-
 	# resp should be a string containing all pub IPs publishing this topic
 	pub_ips = resp.split()
 	return pub_ips
@@ -336,6 +335,8 @@ def listen_for_pub_discovery_req():
 		sub_topic_dict[topic] = {ip}
 	else:
 		sub_topic_dict.get(topic).add(ip)
+
+	update_zk(f"/sub_topic_dict/{topic}",f"{ip}")
 
 def listen_for_pub_registration():
 	#try:
@@ -486,7 +487,7 @@ def add_broker(zk_ip, zk_port):
 	leader = False
 	while not leader:
 		try:
-			driver.add_node('/broker',ip)
+			driver.add_node('/broker',ip,False)
 			leader = True
 			print("Elected as leader, continuing")
 		except:
@@ -504,8 +505,47 @@ def add_broker(zk_ip, zk_port):
 			watch_lock.acquire()
 			watch_lock.release()
 
+	recover_broker()
 
-	#driver.run_driver()
+def recover_broker():
+	# Get each of the maps needed by zk
+
+	# sub_topic_dict
+	topics = driver.get_children("/sub_topic_dict")
+	print(f"topics: {topics}")
+	if topics != None:	
+		for topic in topics:
+			print(topic)
+			ips = driver.get_node_if_exists(f"/sub_topic_dict/{topic}")
+			sub_topic_dict[topic] = set()
+
+			if isinstance(ips, bytes):
+				ips = ips.decode("ascii")
+			print(ips)
+
+			for ip in ips.split(' '):
+				sub_topic_dict.get(topic).add(ip)
+	
+	# TODO: Continue this for each map the broker needs to pick up where the
+	# previous leader left off
+
+
+def update_zk(name,value):
+	exists = driver.check_for_node(name)
+	if exists:
+		current_value = driver.get_node(name)
+
+		if isinstance(value, bytes):
+			value = value.decode("ascii")
+
+		current_value += f" {value}"
+		current_value = f'{current_value}'.encode('utf-8')
+
+		driver.add_node(name,f"value",True)
+	else:
+		value = f'{value}'.encode('utf-8')
+		driver.add_node(name,value,True)
+
 
 def register_zk_driver(zk_ip, zk_port):
 	global driver
@@ -542,6 +582,14 @@ def discover_broker():
 
 		print(value)
 		return value
+	else:
+		value = driver.get_node('/broker')
+		
+		if isinstance(value, bytes):
+			value = value.decode("ascii")
+
+		print(value)
+		return value
 
 
 #	
@@ -564,13 +612,15 @@ def discover_broker():
 # UPDATE: Heartbeat is working, and pubs can drop off the system now without it breaking the new publisher discovery paths
 # 
 # 4. Connect broker to zookeeper, and add leader selection
-# UPDATE: Broker connects to zookeeper, but leader election still needs to be added
+# UPDATE: Broker connects to zookeeper, leader election is being performed, but I need to
+#		> finish recovery after a new leader comes online. This is the recover_broker() function
 #
 # 5. Connect pub and sub to zookeeper to find broker leader
 # UPDATE: Pubs and Subs connects to zookeeper, but params need to be adjusted to intake the
 #		> zookeeper node ip instead of the broker ip (or, we could do both and have different params)
 #		> Also, need to register the pubs and subs to zk so that new brokers can pick up where the old
 #			broker left off.
+#		> I have a model made for this in the recover_broker() func, just need to finish this func
 #
 # 6. Update automated scripts for broker to be always on
 #
