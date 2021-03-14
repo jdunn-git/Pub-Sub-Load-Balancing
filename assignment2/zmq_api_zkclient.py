@@ -287,21 +287,20 @@ class ZK_Driver ():
     ## Functions added for assignment 2
 
     def add_node(self, name, value):
-        try:
-            # here we create a node just like we did via the CLI. But here we are
-            # also showcasing the ephemeral attribute which means that the znode
-            # will be deleted automatically by the server when the session is
-            # terminated by this client. The "makepath=True" parameter ensures that
-            # the znode will first be created and then a value attached to it.
-            #
-            # Note that we do not check here if the node already exists. If it does,
-            # then we will get an exception
-            print(f"Creating an ephemeral znode {name} with value {value}")
-            self.zk.create(name, value=value, ephemeral=True, makepath=True)
+        # here we create a node just like we did via the CLI. But here we are
+        # also showcasing the ephemeral attribute which means that the znode
+        # will be deleted automatically by the server when the session is
+        # terminated by this client. The "makepath=True" parameter ensures that
+        # the znode will first be created and then a value attached to it.
+        #
+        # Note that we do not check here if the node already exists. If it does,
+        # then we will get an exception
+        print(f"Creating an ephemeral znode {name} with value {value}")
+        self.zk.create(name, value=value, ephemeral=True, makepath=True)
 
-        except:
-            print("Exception thrown in create (): ", sys.exc_info()[0])
-            return
+        #except:
+            #print("Exception thrown in create (): ", sys.exc_info()[0])
+            #return
 
     def check_for_node(self, name):
         try:

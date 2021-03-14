@@ -483,8 +483,28 @@ def add_broker(zk_ip, zk_port):
 	print(ip)
 
 	driver.start_session()
-	driver.add_node('/broker',ip)
-	
+	leader = False
+	while not leader:
+		try:
+			driver.add_node('/broker',ip)
+			leader = True
+			print("Elected as leader, continuing")
+		except:
+			watch_lock = Lock()
+			watch_lock.acquire()
+
+			def watch_func(event):
+				print("broker has come online")
+				watch_lock.release()
+			print("There is already a leader, waiting until leader leaves")
+
+			print("Watching for broker znode to change")
+			driver.watch_node('/broker', watch_func)
+			
+			watch_lock.acquire()
+			watch_lock.release()
+
+
 	#driver.run_driver()
 
 def register_zk_driver(zk_ip, zk_port):
