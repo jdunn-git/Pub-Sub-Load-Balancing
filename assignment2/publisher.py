@@ -45,7 +45,7 @@ zip_code = int(args.zip_code)
 topic = args.topic
 
 if not broker_mode:
-    register_pub(topic)
+    register_pub(srv_addr, topic)
 else:
     register_pub_with_broker(srv_addr, topic)
 

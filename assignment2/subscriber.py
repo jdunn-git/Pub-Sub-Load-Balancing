@@ -3,13 +3,36 @@ import sys
 import zmq
 import os
 import datetime
+import time
+import _thread
 
 from zmq_api import (
     discover_publishers,
     listen,
     register_sub,
-    register_sub_with_broker
+    register_sub_with_broker,
+    synchronized_listen,
 )
+
+f = None
+total_temp = 0
+
+def process_response(string, update_nbr):
+    global f
+    global total_temp
+    print(string)
+    zipcode, temperature, relhumidity = string.split()
+    total_temp += int(temperature)
+    #print("Average temperature for zipcode '%s' was %dF" % (
+      #zip_filter, total_temp / (update_nbr+1))
+    #)
+    print(f"Average temperature for zipcode {zip_filter} was {total_temp/ (update_nbr+1)}")
+
+    if f != None:
+        data = f"{zipcode} {temperature} {relhumidity}"
+        timestamp = str(datetime.datetime.utcnow().timestamp())
+        f.write(f"{data} {timestamp}\n")
+
 
 parser = argparse.ArgumentParser ()
 parser.add_argument ("-t", "--topic", type=str, default="zipcode temperature relhumidity", help="Topic needed")
@@ -45,38 +68,33 @@ if isinstance(zip_filter, bytes):
     zip_filter = zip_filter.decode('ascii')
 
 #print("Subscribing to %s" % zip_filter)
-print("Subscribing to {zip_filter}")
+print(f"Subscribing to {zip_filter}")
 
 #broker_mode = int(sys.argv[3]) if len(sys.argv) > 3 else 0
 broker_mode = args.broker_mode
 if not broker_mode:
-    pub_ips = discover_publishers(srv_addr, zip_filter)
-    register_sub(pub_ips, zip_filter)
+    pub_ips = []
+    #while len(pub_ips) == 0:
+    pub_ips = discover_publishers(srv_addr, "zipcode")
+    #    if len(pub_ips) == 0:
+    #        time.sleep(1)
+
+    register_sub(srv_addr, pub_ips, "zipcode", zip_filter, process_response, 10)
 else:
     register_sub_with_broker(srv_addr, zip_filter)
 
-f = None
 if args.record_time:
     if not os.path.isdir(args.record_dir):
         os.mkdir(args.record_dir)
     f = open(f"{args.record_dir}/sub_{zip_filter}-{args.sub_id}.dat","a")
 
-# Process 10 updates
-total_temp = 0
-for update_nbr in range(10):
-    string = listen(zip_filter)
-    zipcode, temperature, relhumidity = string.split()
-    total_temp += int(temperature)
-    #print("Average temperature for zipcode '%s' was %dF" % (
-      #zip_filter, total_temp / (update_nbr+1))
-    #)
-    print(f"Average temperature for zipcode {zip_filter} was {total_temp/ (update_nbr+1)}")
-
-    if f != None:
-        data = f"{zipcode} {temperature} {relhumidity}"
-        timestamp = str(datetime.datetime.utcnow().timestamp())
-        f.write(f"{data} {timestamp}\n")
-
+if not broker_mode:
+    synchronized_listen(zip_filter, process_response, 10)
+else:
+    # Process 10 updates
+    for update_nbr in range(10):
+        string = listen(zip_filter,0)
+        process_response(string, update_nbr)
 
 if f != None:
     f.close()
