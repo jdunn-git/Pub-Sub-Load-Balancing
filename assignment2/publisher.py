@@ -7,10 +7,13 @@ import os
 
 from random import randrange
 from zmq_api import (
+    discover_broker,
     publish,
     publish_to_broker,
     register_pub,
     register_pub_with_broker,
+    register_zk_driver,
+    disconnect,
 )
 
 print(f"Current libzmq version is {zmq.zmq_version()}")
@@ -26,8 +29,15 @@ parser.add_argument ("-w", "--record_time", default=False, action="store_true")
 parser.add_argument ("-d", "--record_dir", type=str, default="timing_data", help="Directory to store timing data")
 args = parser.parse_args ()
 
+zk_ip = "10.0.0.7"
+zk_port = 2181
+register_zk_driver(zk_ip, zk_port)
+broker_ip = discover_broker()
+print(f"Broker found at {broker_ip}")
+
 #srv_addr = sys.argv[2] if len(sys.argv) > 2 else "localhost"
-srv_addr = args.srv_addr
+#srv_addr = args.srv_addr
+srv_addr = broker_ip
 
 #broker_mode = int(sys.argv[3]) if len(sys.argv) > 3 else 0
 broker_mode = args.broker_mode
@@ -88,3 +98,5 @@ while messages_to_publish > messages_published:
 
 if f != None:
     f.close()
+
+disconnect()

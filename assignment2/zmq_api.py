@@ -6,7 +6,7 @@ import ipaddress
 import time
 from threading import Lock, Thread
 
-import zmq_api_zkclient
+import zmq_api_zkclient as zk
 
 #  Socket to talk to server
 context = zmq.Context()
@@ -53,6 +53,13 @@ new_listening_threads = [] # new threads for pubs added after initial discovery
 
 sub_new_pub_listener_thread = Thread()
 sub_thread_end = False
+
+# Zookeeper
+driver = zk.ZK_Driver('127.0.0.1',2181)
+
+
+def close_context():
+	context.destroy()
 
 ## Functions for publisher communication ##
 
@@ -207,8 +214,6 @@ def listen_for_new_pubs(broker, pub_topic, topic_filter, process_response, max_l
 			sub_new_pub_socket.setsockopt_string(zmq.SUBSCRIBE, pub_topic)
 			time.sleep(0.5)
 			continue
-		finally:
-			tmp = 0
 
 		print(f"Adding a new sub for {ip}")
 		tmp_socket = context.socket(zmq.SUB)
@@ -235,7 +240,7 @@ def listen_for_new_pubs(broker, pub_topic, topic_filter, process_response, max_l
 
 # Registers the broker send and receive socks: 1. to get notified of all active pubs and subs,
 # 2. to receive published messages, and 3. to send published messages to the subscribers
-def register_broker():
+def register_broker(zk_ip, zk_port):
 	pub_discovery_socket.bind("tcp://*:5552")
 
 	pub_listener_socket.bind("tcp://*:5553")
@@ -244,6 +249,8 @@ def register_broker():
 	sub_registration_socket.bind("tcp://*:5555")
 
 	new_pub_sock.bind("tcp://*:5551")
+
+	add_broker(zk_ip, zk_port)
 
 
 def register_pub_with_broker(ip, topic):
@@ -331,6 +338,11 @@ def listen_for_pub_discovery_req():
 		sub_topic_dict.get(topic).add(ip)
 
 def listen_for_pub_registration():
+	#try:
+	print("Listening for publisher registration message")
+	#pub_registration_socket = context.socket(zmq.REP)
+	#pub_registration_socket.bind("tcp://*:5554")
+	#pub_registration_socket.setsockopt(zmq.RCVTIMEO, 500) # milliseconds
 	resp = pub_registration_socket.recv()
 	if isinstance(resp, bytes):
 		resp = resp.decode("ascii")
@@ -364,6 +376,12 @@ def listen_for_pub_registration():
 	ret = "ip %s topics %s" % (ip, topics)
 
 	return ret
+	#except:
+		#print("No pubs to register, sleeping")
+		#pub_registration_socket = context.socket(zmq.REP)
+		#pub_registration_socket.bind("tcp://*:5554")
+		#pub_registration_socket.setsockopt( zmq.RCVTIMEO, 500 ) # milliseconds
+		#resp = pub_registration_socket.recv()
 
 def listen_for_sub_registration():
 	string = sub_registration_socket.recv()
@@ -391,7 +409,6 @@ def listen_for_sub_registration():
 	print(f"Telling sub to register to port {sub_port-1}")
 	resp = sub_port_dict.get(topic_filter)
 	sub_registration_socket.send_string(str(resp))
-
 
 def publish_to_broker(topic, data, message_number, timestamp):
 	print(f"Sending Data number {message_number} at {timestamp}")
@@ -454,14 +471,60 @@ def get_local_ip():
 
 ## Functions for zookeeper client ##
 
-def createnode():
+def add_broker(zk_ip, zk_port):
+	global driver
 
-	driver = ZK_Driver
+	driver = zk.ZK_Driver(zk_ip,zk_port)
 	driver.init_driver()
-	driver.run_driver()
+	
+	ip = get_local_ip()
+	ip = f'{ip}'.encode('utf-8')
+
+	print(ip)
+
+	driver.start_session()
+	driver.add_node('/broker',ip)
+	
+	#driver.run_driver()
+
+def register_zk_driver(zk_ip, zk_port):
+	global driver
+
+	driver = zk.ZK_Driver(zk_ip,zk_port)
+	driver.init_driver()
+	driver.start_session()
+
+def disconnect():
+	driver.stop_session()
+	close_context()
+
+def discover_broker():
+	exists = driver.check_for_node('/broker')
+	if not exists:
+		watch_lock = Lock()
+		watch_lock.acquire()
+
+		def watch_func(event):
+			print("broker has come online")
+			watch_lock.release()
+
+		print("Watching for broker to come online")
+		driver.watch_node('/broker', watch_func)
+		
+		watch_lock.acquire()
+		watch_lock.release()
+
+		print("Finding broker address")
+		value = driver.get_node('/broker')
+		
+		if isinstance(value, bytes):
+			value = value.decode("ascii")
+
+		print(value)
+		return value
 
 
-#
+#	
 # TODO:	
 #
 # 1. Make broker able to always run, both in flood mode (where it just handles discovery), and in normal broker mode
@@ -481,6 +544,11 @@ def createnode():
 # UPDATE: Heartbeat is working, and pubs can drop off the system now without it breaking the new publisher discovery paths
 # 
 # 4. Connect broker to zookeeper, and add leader selection
+# Update: Broker connects to zookeeper, but leader election still needs to be added
+#
 # 5. Connect pub and sub to zookeeper to find broker leader
+# Update: Pubs and Subs connects to zookeeper, but params need to be adjusted to intake the
+#		> zookeeper node ip instead of the broker ip (or, we could do both and have different params)
+#
 # 6. Update automated scripts for broker to be always on
 #
