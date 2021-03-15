@@ -302,6 +302,14 @@ class ZK_Driver ():
             #print("Exception thrown in create (): ", sys.exc_info()[0])
             #return
 
+    def update_value(self, name, value):
+        print ("Checking if {} exists (it better be)".format(name))
+        if self.zk.exists (name):
+            print ("{} znode indeed exists; get value".format(name))
+
+            self.zk.set (name, value)
+
+
     def check_for_node(self, name):
         try:
             print(f"Checking for an ephemeral znode {name}")
@@ -312,7 +320,7 @@ class ZK_Driver ():
 
     def watch_node(self, name, watch_func):
         try:
-            print(f"Watching for an ephemeral znode {name}")
+            #print(f"Watching for an ephemeral znode {name}")
             return self.zk.exists(name, watch=watch_func)
         except:
             print("Exception thrown in get (): ", sys.exc_info()[0])
@@ -324,14 +332,14 @@ class ZK_Driver ():
             # Now we are going to check if the znode that we just created
             # exists or not. Note that a watch can be set on create, exists
             # and get/set methods
-            print ("Checking if {} exists (it better be)".format(name))
+            #print ("Checking if {} exists (it better be)".format(name))
             if self.zk.exists (name):
-                print ("{} znode indeed exists; get value".format(name))
+                #print ("{} znode indeed exists; get value".format(name))
 
                 # Now acquire the value and stats of that znode
                 #value,stat = self.zk.get (self.zkName, watch=self.watch)
                 value,stat = self.zk.get (name)
-                print(("Details of znode {}: value = {}, stat = {}".format (name, value, stat)))
+               # print(("Details of znode {}: value = {}, stat = {}".format (name, value, stat)))
                 return value
             else:
                 print ("{} znode does not exist, why?".format(name))
