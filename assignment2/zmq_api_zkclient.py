@@ -42,12 +42,12 @@ class ZK_Driver ():
     #################################################################
     # constructor
     #################################################################
-    def __init__ (self, zk_ip, zk_port, zk_name, ):
+    def __init__ (self, zk_ip, zk_port):
         self.zk = None  # session handle to the zookeeper server
         self.zkIPAddr = zk_ip  # ZK server IP address
         self.zkPort = zk_port # ZK server port num
-        self.zkName = zk_name # refers to the znode path being manipulated
-        self.zkVal = zk_val # refers to the znode value
+        self.zkName = '/foo' # refers to the znode path being manipulated
+        self.zkVal = b'bar' # refers to the znode value
 
     #-----------------------------------------------------------------------
     # Debugging: Dump the contents
@@ -115,7 +115,7 @@ class ZK_Driver ():
     def start_session (self):
         """ Starting a Session """
         try:
-            # now connect to the server
+            # now add_nodeconnect to the server
             self.zk.start ()
 
         except:
@@ -128,6 +128,7 @@ class ZK_Driver ():
     def stop_session (self):
         """ Stopping a Session """
         try:
+            print(self.zkIPAddr)
             #
             # now disconnect from the server
             self.zk.stop ()
@@ -283,3 +284,106 @@ class ZK_Driver ():
         except:
             print("Exception thrown: ", sys.exc_info()[0])
 
+    ## Functions added for assignment 2
+
+    def add_node(self, name, value, persistent):
+        # here we create a node just like we did via the CLI. But here we are
+        # also showcasing the ephemeral attribute which means that the znode
+        # will be deleted automatically by the server when the session is
+        # terminated by this client. The "makepath=True" parameter ensures that
+        # the znode will first be created and then a value attached to it.
+        #
+        # Note that we do not check here if the node already exists. If it does,
+        # then we will get an exception
+        print(f"Creating an ephemeral znode {name} with value {value}")
+        self.zk.create(name, value=value, ephemeral=not persistent, makepath=True)
+
+        #except:
+            #print("Exception thrown in create (): ", sys.exc_info()[0])
+            #return
+
+    def update_value(self, name, value):
+        print ("Checking if {} exists (it better be)".format(name))
+        if self.zk.exists (name):
+            print ("{} znode indeed exists; get value".format(name))
+
+            self.zk.set (name, value)
+
+
+    def check_for_node(self, name):
+        try:
+            print(f"Checking for an ephemeral znode {name}")
+            return self.zk.exists(name)
+        except:
+            print("Exception thrown in exists (): ", sys.exc_info()[0])
+            return False        
+
+    def watch_node(self, name, watch_func):
+        try:
+            #print(f"Watching for an ephemeral znode {name}")
+            return self.zk.exists(name, watch=watch_func)
+        except:
+            print("Exception thrown in get (): ", sys.exc_info()[0])
+            return False        
+
+    def get_node(self, name):
+        try:
+
+            # Now we are going to check if the znode that we just created
+            # exists or not. Note that a watch can be set on create, exists
+            # and get/set methods
+            #print ("Checking if {} exists (it better be)".format(name))
+            if self.zk.exists (name):
+                #print ("{} znode indeed exists; get value".format(name))
+
+                # Now acquire the value and stats of that znode
+                #value,stat = self.zk.get (self.zkName, watch=self.watch)
+                value,stat = self.zk.get (name)
+               # print(("Details of znode {}: value = {}, stat = {}".format (name, value, stat)))
+                return value
+            else:
+                print ("{} znode does not exist, why?".format(name))
+
+        except:
+            print("Exception thrown checking for exists/get: ", sys.exc_info()[0])
+            return
+
+    def get_node_if_exists(self, name):
+        try:
+
+            # Now we are going to check if the znode that we just created
+            # exists or not. Note that a watch can be set on create, exists
+            # and get/set methods
+            print ("Checking if {} exists".format(name))
+            if self.zk.exists (name):
+                print ("{} znode indeed exists; get value".format(name))
+
+                # Now acquire the value and stats of that znode
+                #value,stat = self.zk.get (self.zkName, watch=self.watch)
+                value,stat = self.zk.get (name)
+                print(("Details of znode {}: value = {}, stat = {}".format (name, value, stat)))
+                return value
+
+        except:
+            print("Exception thrown getting znode: ", sys.exc_info()[0])
+            return
+
+    def get_children(self, name):
+        try:
+
+            # Now we are going to check if the znode that we just created
+            # exists or not. Note that a watch can be set on create, exists
+            # and get/set methods
+            print ("Checking if {} exists".format(name))
+            if self.zk.exists (name):
+                print ("{} znode indeed exists; get value".format(name))
+
+                # Now acquire the value and stats of that znode
+                #value,stat = self.zk.get (self.zkName, watch=self.watch)
+                value = self.zk.get_children(name)
+                print(("Details of znode {}: value = {}".format (name, value)))
+                return value
+
+        except:
+            print("Exception thrown getting children of znode: ", sys.exc_info()[0])
+            return

@@ -7,11 +7,14 @@ import time
 import _thread
 
 from zmq_api import (
+    discover_broker,
     discover_publishers,
     listen,
     register_sub,
     register_sub_with_broker,
     synchronized_listen,
+    register_zk_driver,
+    disconnect,
 )
 
 f = None
@@ -45,6 +48,12 @@ parser.add_argument ("-w", "--record_time", default=False, action="store_true")
 parser.add_argument ("-d", "--record_dir", type=str, default="timing_data", help="Directory to store timing data")
 args = parser.parse_args ()
 
+zk_ip = "10.0.0.7"
+zk_port = 2181
+register_zk_driver(zk_ip, zk_port)
+broker_ip = discover_broker()
+print(f"Broker found at {broker_ip}")
+
 #  Socket to talk to server
 #context = zmq.Context()
 #socket = context.socket(zmq.SUB)
@@ -52,7 +61,8 @@ args = parser.parse_args ()
 # Here we assume publisher runs locally unless we
 # send a command line arg like 10.0.0.1
 #srv_addr = sys.argv[1] if len(sys.argv) > 1 else "localhost"
-srv_addr = args.srv_addr
+#srv_addr = args.srv_addr
+srv_addr = broker_ip
 #connect_str = "tcp://" + srv_addr + ":5556"
 connect_str = f"tcp://{srv_addr}:5556"
 
@@ -99,4 +109,4 @@ else:
 if f != None:
     f.close()
 
-
+disconnect()
