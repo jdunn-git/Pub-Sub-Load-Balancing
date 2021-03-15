@@ -356,7 +356,7 @@ def listen_for_pub_discovery_req():
 
 		# Note: There is a small race condition where a pub goes down between the heartbeat check and here, but
 		# it is miniscule and likely not worth the time to solve
-		delim = ', '
+		delim = ' '
 		print(pub_topic_dict.get(topic))
 		pubs = delim.join(pub_topic_dict.get(topic))
 		print(pubs)
@@ -646,6 +646,8 @@ def update_zk(action,name,value,unique=True):
 			new_value = f"{current_value}{value} "
 			new_value = f'{new_value}'.encode('utf-8')
 
+			print(f"update value {current_value} to {new_value} to {name}")
+
 			driver.update_value(name,new_value)
 		
 		else:
@@ -658,7 +660,7 @@ def update_zk(action,name,value,unique=True):
 	else:
 		if action == "add":
 			value = f'{value} '.encode('utf-8')
-			print(f"adding value {value}")
+			print(f"adding value {value} to {name}")
 			driver.add_node(name,value,True)
 
 
