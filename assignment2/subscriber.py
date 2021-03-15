@@ -39,7 +39,7 @@ def process_response(string, update_nbr):
 
 parser = argparse.ArgumentParser ()
 parser.add_argument ("-t", "--topic", type=str, default="zipcode temperature relhumidity", help="Topic needed")
-parser.add_argument ("-s", "--srv_addr", type=str, default="localhost", help="Server Address")
+parser.add_argument ("-s", "--srv_addr", type=str, default="localhost", help="Zookeeper Server Address")
 parser.add_argument ("-b", "--broker_mode", default=False, action="store_true")
 parser.add_argument ("-z", "--zip_code", type=str, default="10001", help="Zip Code")
 parser.add_argument ("-e", "--executions", type=int, default=20, help="Number of executions for the program")
@@ -48,8 +48,9 @@ parser.add_argument ("-w", "--record_time", default=False, action="store_true")
 parser.add_argument ("-d", "--record_dir", type=str, default="timing_data", help="Directory to store timing data")
 args = parser.parse_args ()
 
-zk_ip = "10.0.0.7"
+#zk_ip = "10.0.0.7"
 zk_port = 2181
+zk_ip = args.srv_addr
 register_zk_driver(zk_ip, zk_port)
 broker_ip = discover_broker()
 print(f"Broker found at {broker_ip}")
@@ -62,7 +63,7 @@ print(f"Broker found at {broker_ip}")
 # send a command line arg like 10.0.0.1
 #srv_addr = sys.argv[1] if len(sys.argv) > 1 else "localhost"
 #srv_addr = args.srv_addr
-srv_addr = broker_ip
+
 #connect_str = "tcp://" + srv_addr + ":5556"
 connect_str = f"tcp://{srv_addr}:5556"
 
@@ -85,13 +86,13 @@ broker_mode = args.broker_mode
 if not broker_mode:
     pub_ips = []
     #while len(pub_ips) == 0:
-    pub_ips = discover_publishers(srv_addr, "zipcode")
+    pub_ips = discover_publishers(broker_ip, "zipcode")
     #    if len(pub_ips) == 0:
     #        time.sleep(1)
 
-    register_sub(srv_addr, pub_ips, "zipcode", zip_filter, process_response, 10)
+    register_sub(broker_ip, pub_ips, "zipcode", zip_filter, process_response, 10)
 else:
-    register_sub_with_broker(srv_addr, zip_filter)
+    register_sub_with_broker(broker_ip, zip_filter)
 
 if args.record_time:
     if not os.path.isdir(args.record_dir):

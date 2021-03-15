@@ -54,6 +54,7 @@ def execute(output_dir, hosts, publishers, subscribers, ratio, broker_mode = Fal
     pub_hosts = []
     sub_commands = []
     sub_hosts = []
+    zk_commands = []
     broker_commands = []
 
     commands = []
@@ -74,6 +75,8 @@ def execute(output_dir, hosts, publishers, subscribers, ratio, broker_mode = Fal
         zipcode = float(10101)
         # Allocate first host as broker
         #commands.append(f"python3 ./broker.py")
+        zk_commands.append(f"./opt/zookeeper/bin/zkServer.sh start")
+        zk_commands.append(f"./opt/zookeeper/bin/zkServer.sh stop")
         broker_commands.append(f"python3 ./broker.py")
         # Allocate commands for publishers and subscribers
         for i in range(publishers):
@@ -98,10 +101,13 @@ def execute(output_dir, hosts, publishers, subscribers, ratio, broker_mode = Fal
         host_index = 0
         ip_end = float(1)
         zipcode = float(10101)
+        zk_commands.append(f"./opt/zookeeper/bin/zkServer.sh start")
+        zk_commands.append(f"./opt/zookeeper/bin/zkServer.sh stop")
+        broker_commands.append(f"python3 ./broker.py")
         for i in range(publishers):
             zip_holder = int(zipcode)
             #commands.append(f"python3 ./publisher.py -z {zip_holder} -e {executions} -w -d {output_dir}{record_dir} &> {output_dir}{hosts[host_index].name}.out")
-            pub_commands.append(f"python3 ./publisher.py -z {zip_holder} -e {executions} -w -d {output_dir}{record_dir} &> {output_dir}{hosts[host_index].name}.out")
+            pub_commands.append(f"python3 ./publisher.py -s 10.0.0.1 -z {zip_holder} -e {executions} -w -d {output_dir}{record_dir} &> {output_dir}{hosts[host_index].name}.out")
             pub_hosts.append(hosts[host_index])
             zipcode += 1 * pub_mod
             host_index += 1
@@ -111,7 +117,7 @@ def execute(output_dir, hosts, publishers, subscribers, ratio, broker_mode = Fal
             ip_holder = int(ip_end)
             zip_holder = int(zipcode)
             #commands.append(f"python3 ./subscriber.py -s 10.0.0.{ip_holder} -z {zip_holder} -e {executions} -w -d {output_dir}{record_dir} &> {output_dir}{hosts[host_index].name}.csv")
-            sub_commands.append(f"python3 ./subscriber.py -s 10.0.0.{ip_holder} -z {zip_holder} -e {executions} -i {i} -w -d {output_dir}{record_dir} &> {output_dir}{hosts[host_index].name}.csv")
+            sub_commands.append(f"python3 ./subscriber.py -s 10.0.0.1 -z {zip_holder} -e {executions} -i {i} -w -d {output_dir}{record_dir} &> {output_dir}{hosts[host_index].name}.csv")
             sub_hosts.append(hosts[host_index])
             ip_end += 1 / ratio
             zipcode += 1 * sub_mod
@@ -133,9 +139,16 @@ def execute(output_dir, hosts, publishers, subscribers, ratio, broker_mode = Fal
 
     while hosts_in_use < hosts_to_run:
         print(f"Hosts to run: {hosts_to_run}, hosts in use: {hosts_in_use}")
-        if broker_mode and hosts_in_use == 0    :
+        if hosts_in_use == 0:
+            print(f"Call command {zookeeper_commands[0]} on {hosts[hosts_in_use]}")
+            thread = threading.Thread(target=hosts[0].cmdPrint, args=(zk_commands[0],))
+            thread.start()
+            host_threads.append(thread)
+            host_names.append(hosts[hosts_in_use].name)
+            hosts_in_use = hosts_in_use + 1
+
             print(f"Call command {broker_commands[0]} on {hosts[hosts_in_use]}")
-            thread = threading.Thread(target=hosts[0].cmdPrint, args=(broker_commands[0],))
+            thread = threading.Thread(target=hosts[1].cmdPrint, args=(broker_commands[0],))
             thread.start()
             host_threads.append(thread)
             host_names.append(hosts[hosts_in_use].name)
@@ -166,9 +179,10 @@ def execute(output_dir, hosts, publishers, subscribers, ratio, broker_mode = Fal
             print(f"Wait for {host_names[i]} to be done")
             host_threads[i].join()
 
-    if broker_mode:
-        print("Terminating Broker")
-        hosts[0].terminate()
+    print("Terminating Broker")
+    hosts[0].terminate()
+    hosts[1].terminate()
+
 
 
 
