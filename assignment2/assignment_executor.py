@@ -2,6 +2,7 @@ import os
 import sys
 import argparse
 import threading
+from threading import Lock, Thread
 
 from signal import SIGINT
 import time
@@ -22,6 +23,9 @@ from mr_topology import MR_Topo
 
 from mininet.node import OVSController
 
+broker_cycle = 0
+broker_lock = Lock()
+terminating = False
 
 def parse_args():
     # parse the command line
@@ -49,6 +53,9 @@ def parse_args():
 
 
 def execute(output_dir, hosts, publishers, subscribers, ratio, broker_mode = False, executions=20, record_time = False, record_dir = "timing_data"):
+    global broker_cycle
+    global broker_lock
+    global terminating
 
     pub_commands = []
     pub_hosts = []
@@ -72,7 +79,7 @@ def execute(output_dir, hosts, publishers, subscribers, ratio, broker_mode = Fal
         pub_mod = ratio
 
     if broker_mode:
-        host_index = 1
+        host_index = 2
         ip_holder = 1
         zipcode = float(10101)
         # Allocate first host as broker
@@ -80,8 +87,9 @@ def execute(output_dir, hosts, publishers, subscribers, ratio, broker_mode = Fal
         zk_commands.append(f"/opt/zookeeper/bin/zkServer.sh start")
         zk_commands.append(f"/opt/zookeeper/bin/zkServer.sh stop")
         #broker_commands.append(f"python3 ./broker.py -s {zk_ip} -m {publishers*executions}")
-        broker_commands.append(f"python3 ./broker.py -zk {zk_ip} -a")
-        broker_commands.append(f"\n")
+        broker_commands.append(f"python3 ./broker.py -zk {zk_ip} -k 5")
+        #broker_commands.append(f"python3 ./broker.py -zk {zk_ip} -a")
+        broker_commands.append(f"^C")
         # Allocate commands for publishers and subscribers
         for i in range(publishers):
             zip_holder = int(zipcode)
@@ -104,13 +112,14 @@ def execute(output_dir, hosts, publishers, subscribers, ratio, broker_mode = Fal
                 zipcode = float(10101)
 
     else:
-        host_index = 1
+        host_index = 2
         ip_end = float(1)
         zipcode = float(10101)
         zk_commands.append(f"/opt/zookeeper/bin/zkServer.sh start")
         zk_commands.append(f"/opt/zookeeper/bin/zkServer.sh stop")
-        broker_commands.append(f"python3 ./broker.py -zk {zk_ip} -a")
-        broker_commands.append(f"\n")
+        broker_commands.append(f"python3 ./broker.py -zk {zk_ip} -k 5")
+        #broker_commands.append(f"python3 ./broker.py -zk {zk_ip} -a")
+        broker_commands.append(f"^C")
         for i in range(publishers):
             zip_holder = int(zipcode)
             pub_commands.append(f"python3 ./publisher.py -zk {zk_ip} -z {zip_holder} -e {executions} -w -d {output_dir}{record_dir} &> {output_dir}{hosts[host_index].name}.out")
@@ -139,7 +148,7 @@ def execute(output_dir, hosts, publishers, subscribers, ratio, broker_mode = Fal
     pubs_running = 0
     subs_running = 0
     hosts_to_run = len(sub_commands)+len(pub_commands)
-    hosts_to_run = hosts_to_run + 1
+    hosts_to_run = hosts_to_run + 2
     #if broker_mode:
     #    hosts_to_run = hosts_to_run + 1
 
@@ -157,12 +166,17 @@ def execute(output_dir, hosts, publishers, subscribers, ratio, broker_mode = Fal
 
             print(f"Call command {broker_commands[0]} on {hosts[0]}")
             thread = threading.Thread(target=hosts[0].cmdPrint, args=(broker_commands[0],))
-            thread.start()
+            #thread.start()
             host_threads.append(thread)
             host_names.append(hosts[hosts_in_use].name)
             hosts_in_use = hosts_in_use + 1
            
-            time.sleep(3) # seconds
+            print(f"Call command {broker_commands[0]} on {hosts[1]}")
+            thread = threading.Thread(target=hosts[1].cmdPrint, args=(broker_commands[0],))
+            #thread.start()
+            host_threads.append(thread)
+            host_names.append(hosts[hosts_in_use].name)
+            hosts_in_use = hosts_in_use + 1
 
         if subs_running < len(sub_commands):
             print(f"Call command {sub_commands[subs_running]} on {sub_hosts[subs_running]}")
@@ -187,9 +201,17 @@ def execute(output_dir, hosts, publishers, subscribers, ratio, broker_mode = Fal
 
         print(f"** Hosts to run: {hosts_to_run}, hosts in use: {hosts_in_use}")
 
+    host_threads[1].start()
+    host_threads[2].start()
+    thread = threading.Thread(target=cycle_broker, args=(hosts, broker_commands, host_threads, 0, ))
+    thread.start()
+    time.sleep(2)
+    thread = threading.Thread(target=cycle_broker, args=(hosts, broker_commands, host_threads, 1, ))
+    thread.start()
+
     print(f"** Have {hosts_in_use+1} hosts to join")
     for i in range(hosts_in_use):
-        if i > 1:
+        if i > 2:
             print(f"Wait for {host_names[i]} to be done")
             host_threads[i].join()
     '''
@@ -197,22 +219,44 @@ def execute(output_dir, hosts, publishers, subscribers, ratio, broker_mode = Fal
     thread.start()
     thread.join()
     '''
-    time.sleep(3)
+    terminating = True
 
+    time.sleep(3)
+    print("**********************")
+    print("All pubs and subs have joined back...")
     print("Just need to join the broker and zookeeper nodes")
+    print("**********************")
 
     #host_threads[0].join()
     #host_threads[1].join()
 
-    print("Terminating Broker")
+    broker_lock.acquire()
+    print(f"Terminating Broker {hosts[broker_cycle]}")
     hosts[0].terminate()
-    print("Terminated Broker")
+    hosts[1].terminate()
+    print(f"Terminated Broker {hosts[broker_cycle]}")
+    broker_lock.release()
     #hosts[len(hosts)-1].terminate()
     #time.sleep(3)
     thread = threading.Thread(target=hosts[len(hosts)-1].cmdPrint, args=(zk_commands[1],))
     thread.start()
     thread.join()
     time.sleep(3)
+
+def cycle_broker(hosts, broker_commands, host_threads, index):
+    global broker_cycle
+    global broker_lock
+    global terminating
+
+    while not terminating:
+
+        time.sleep(2)
+        thread = host_threads[index]
+        thread.join()
+        thread = threading.Thread(target=hosts[broker_cycle].cmdPrint, args=(broker_commands[0],))
+        thread.start()
+        host_threads[index] = thread
+    print(f"Done restarting broker node {hosts[broker_cycle]}")
 
 
 def main():

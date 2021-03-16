@@ -56,7 +56,14 @@ class MR_Topo(Topo):
         host_index += 1
 
 
-        # Now add broker node
+        # Now add broker nodes
+        host = self.addHost (f'BROKERh{host_index+1}s{switch_index+1}')
+        print("Added broker host", host)
+        self.addLink (host, self.mr_switches[switch_index], delay='1ms')  # zero based indexing
+        print(f"Added link between {host} and switch {self.mr_switches[switch_index]}")
+        self.mr_hosts.append (host)
+        host_index += 1
+
         host = self.addHost (f'BROKERh{host_index+1}s{switch_index+1}')
         print("Added broker host", host)
         self.addLink (host, self.mr_switches[switch_index], delay='1ms')  # zero based indexing

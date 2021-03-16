@@ -856,7 +856,7 @@ def monitor_broker_change():
 #			> This is really close to being done, just needs these params added to the pub and sub.
 #			> Right now, it's hardcoded to use now 10.0.0.7 as the zookeeper node
 #
-# [    ] 6. Update automated scripts for broker to be always on and for zookeeper to be started
+# [DONE] 6. Update automated scripts for broker to be always on and for zookeeper to be started
 #
 # [    ] 7. Data generation and graphing
 #

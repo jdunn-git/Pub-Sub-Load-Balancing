@@ -1,6 +1,8 @@
 import argparse
 import zmq
 import sys
+import time
+from signal import signal, SIGINT
 from threading import Thread
 
 from zmq_api import (
@@ -20,50 +22,72 @@ parser = argparse.ArgumentParser ()
 parser.add_argument ("-zk", "--zookeeper_ip", type=str, default="10.0.0.7", help="Zookeeper IP Address")
 parser.add_argument ("-zp", "--zookeeper_port", type=int, default=2181, help="Zookeeper Port")
 parser.add_argument ("-m", "--max_pub_count", type=int, default=-1, help="Maximum number of data propagations through broker.")
+parser.add_argument ("-k", "--keep_alive", type=int, default=-1, help="Time to keep the broker alive.")
 parser.add_argument ("-a", "--auto_mode", default=False, action="store_true")
 args = parser.parse_args ()
 
 threads = []
 terminating = False
 
+def handler(signal_received, frame):
+	global terminating
+	# Handle any cleanup here
+	print('SIGINT or CTRL-C detected. Exiting gracefully')
+	terminating = True
+	disconnect()
+	exit(0)
+
+signal(SIGINT, handler)
 
 def register_subs():
 	global terminating
-	while not terminating:
-		# Listen for new subs to come onto the system
-		listen_for_sub_registration()
+	try:
+		while not terminating:
+			# Listen for new subs to come onto the system
+			listen_for_sub_registration()
+	except:
+		print("Sub registration listener ended")
 
 
 def register_pubs():
 	global terminating
-	while not terminating:
-		# Listen for new subs to come onto the system
-		listen_for_pub_registration()
+	try:
+		while not terminating:
+			# Listen for new subs to come onto the system
+			listen_for_pub_registration()
+	except:
+		print("Pub registration listener ended")
 
 def process_discovery():
 	global terminating
-	while not terminating:
-		# Listen for new subs to come onto the system
-		listen_for_pub_discovery_req()
+	try:
+		while not terminating:
+			# Listen for new subs to come onto the system
+			listen_for_pub_discovery_req()
+	except:
+			print("Pub discovery listener ended")
 
 def pub_data_processor():
 	global terminating
 	max_pub_count = args.max_pub_count
 	pub_count = 0
-	while not terminating:
+	try:
+		while not terminating:
 		# Break if we have exceeded the maximuim count
-		if (max_pub_count != -1 and pub_count >= max_pub_count):
-			print("max pub count hit")
-			terminating = True
-			disconnect()
-			sys.exit(0)
+			if (max_pub_count != -1 and pub_count >= max_pub_count):
+				print("max pub count hit")
+				terminating = True
+				disconnect()
+				sys.exit(0)
 
-			break
-		#else:
-		#	print(f"Max: {max_pub_count}, current: {pub_count}")
+				break
+			#else:
+			#	print(f"Max: {max_pub_count}, current: {pub_count}")
 
-		receive_pub_data()
-		pub_count += 1
+			receive_pub_data()
+			pub_count += 1
+	except:
+		print("Data propagator ended")			
 
 def receive_pub_data():
 	# Get the pub message
@@ -99,13 +123,20 @@ t = Thread(target=pub_data_processor, args=())
 t.start()
 threads.append(t)
 
-if not args.auto_mode:
+#if not args.auto_mode:
 
+if args.keep_alive == -1:
+	#while True:
+	#	pass
 	# Wait for input to kill the broker and terminate connections
 	input ("Disconnect from the server -- Press any key to continue")
 	print("Disconnected from the server")
 	terminating = True
 	disconnect()
-	#for t in threads:
-	#	t.join()
+	sys.exit(0)
+else:
+	time.sleep(args.keep_alive)
+	print("Disconnected from the server")
+	terminating = True
+	disconnect()
 	sys.exit(0)
