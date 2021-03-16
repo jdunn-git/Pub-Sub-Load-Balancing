@@ -69,13 +69,13 @@ def close_context():
 ## Functions for publisher communication ##
 
 # Registers publisher
-def register_pub(ip, topic):
-	print("Registering to broker at tcp://%s:5554 with topic: %s" % (ip, topic))
+def register_pub(ip, topic, topic_filter):
+	print("Registering to broker at tcp://%s:5554 with topic/filter %s/%s" % (ip, topic, topic_filter))
 
 	tmp_socket = context.socket(zmq.REQ)
 	tmp_socket.connect("tcp://%s:5554" % ip)
 	local_ip = get_local_ip()
-	tmp_socket.send_string("Registering flood %s %s" % (topic, local_ip))
+	tmp_socket.send_string("Registering flood %s %s %s" % (topic, topic_filter, local_ip))
 	resp = tmp_socket.recv()
 
 	if isinstance(resp, bytes):
@@ -117,7 +117,7 @@ def register_sub(broker, ips, topic, topic_filter, process_response, max_listens
 	broker_ip = broker
 	print(f"listening for new pubs on {topic} from {broker_ip}")
 	sub_new_pub_socket.connect(f"tcp://{broker_ip}:5551")
-	sub_new_pub_socket.setsockopt_string(zmq.SUBSCRIBE, topic)
+	sub_new_pub_socket.setsockopt_string(zmq.SUBSCRIBE, topic_filter)
 	#sub_new_pub_socket.setsockopt(zmq.RCVTIMEO, 500 ) # milliseconds
 	sub_new_pub_listener_thread = Thread(target=listen_for_new_pubs, args=(topic, topic_filter, process_response, max_listens))
 	sub_new_pub_listener_thread.start()
@@ -151,7 +151,7 @@ def listen(topic_filter, index):
 			time.sleep(0.5)
 
 
-def synchronized_listen_helper(topic_filter, sock, process_response, max_listens, index):
+def synchronized_listen_helper(topic, topic_filter, sock, process_response, max_listens, index):
 	print("In listen helper")
 	global sync_listen_count
 	global pub_ips
@@ -159,7 +159,10 @@ def synchronized_listen_helper(topic_filter, sock, process_response, max_listens
 		while sync_listen_count < max_listens:
 			try:
 				print(f"Have socket for topic_filter {topic_filter}, waiting for message {sync_listen_count}")
+				#sock.setsockopt(ZMQ_RCVTIMEO, 500);
+				#string = sock.recv_string()
 				string = sock.recv_string(flags=zmq.NOBLOCK)
+				#print(f"{string}")
 				listen_count_lock.acquire()
 				# Double checking this here in case any race conditions I haven't planned for exist
 				if sync_listen_count >= max_listens:
@@ -174,11 +177,12 @@ def synchronized_listen_helper(topic_filter, sock, process_response, max_listens
 				#print(pub_ips)
 				ip = pub_ips[index]
 				sock.connect(f"tcp://{ip}:5556")
-				sock.setsockopt_string(zmq.SUBSCRIBE, topic_filter)
-				time.sleep(0.25)
+				print(f"filtering for new published message from {ip} on {topic_filter}")
+				sock.setsockopt_string(zmq.SUBSCRIBE, f"{topic_filter}")
+				time.sleep(0.4)
 
 
-def synchronized_listen(topic_filter, process_response, max_listens):
+def synchronized_listen(topic, topic_filter, process_response, max_listens):
 	print("In synchronized listen")
 	global listening_lock
 	global new_listening_threads
@@ -194,7 +198,7 @@ def synchronized_listen(topic_filter, process_response, max_listens):
 			print(f"Starting new thread {i}")
 			#_thread.start_new_thread(synchronized_listen_helper,(topic_filter, 0, process_response, max_listens))
 			sock = sub_dict.get(topic_filter)[i]
-			t = Thread(target=synchronized_listen_helper, args=(topic_filter, sock, process_response, max_listens, i))
+			t = Thread(target=synchronized_listen_helper, args=(topic, topic_filter, sock, process_response, max_listens, i))
 			t.start()
 			listening_threads.append(t)
 
@@ -254,8 +258,8 @@ def listen_for_new_pubs(pub_topic, topic_filter, process_response, max_listens):
 		except:
 			sub_new_pub_socket = context.socket(zmq.SUB)
 			sub_new_pub_socket.connect(f"tcp://{broker_ip}:5551")
-			print(f"filtering on {pub_topic}")
-			sub_new_pub_socket.setsockopt_string(zmq.SUBSCRIBE, pub_topic)
+			print(f"filtering for new pub on {pub_topic}_{topic_filter}")
+			sub_new_pub_socket.setsockopt_string(zmq.SUBSCRIBE, f"{pub_topic}_{topic_filter}")
 			time.sleep(0.5)
 			continue
 
@@ -269,12 +273,12 @@ def listen_for_new_pubs(pub_topic, topic_filter, process_response, max_listens):
 				sub_dict[topic_filter] = [tmp_socket]
 			else:
 				sub_dict[topic_filter].append(tmp_socket)
-			print("Listening to publisher at %s for %s" % (ip, topic_filter))
+			print("Listening to new publisher at %s for %s" % (ip, topic_filter))
 
 			listening_lock.acquire()
 			if listening_state != "done":
 				print("Active listening is happening, adding thread")
-				t = Thread(target=synchronized_listen_helper, args=(topic_filter, tmp_socket, process_response, max_listens))
+				t = Thread(target=synchronized_listen_helper, args=(pub_topic, topic_filter, tmp_socket, process_response, max_listens, len(pub_ips)-1))
 				t.start()
 				new_listening_threads.append(t)
 			else:
@@ -299,13 +303,13 @@ def register_broker(zk_ip, zk_port):
 	add_broker(zk_ip, zk_port)
 
 
-def register_pub_with_broker(ip, topic):
-	print("Registering to broker at tcp://%s:5554 with topic: %s" % (ip, topic))
+def register_pub_with_broker(ip, topic, topic_filter):
+	print("Registering to broker at tcp://%s:5554 with topic/filter: %s/%s" % (ip, topic, topic_filter))
 
 	tmp_socket = context.socket(zmq.REQ)
 	tmp_socket.connect("tcp://%s:5554" % ip)
 	local_ip = get_local_ip()
-	tmp_socket.send_string("Registering broker %s %s" % (topic, local_ip))
+	tmp_socket.send_string("Registering broker %s %s %s" % (topic, topic_filter, local_ip))
 	resp = tmp_socket.recv()
 
 	if isinstance(resp, bytes):
@@ -361,6 +365,7 @@ def discover_publishers(ip, topic):
 	#for ip in resp:
 	#	pub_ips.append(ip)
 	pub_ips = resp.split()
+	print(f"Found broker(s): {pub_ips})")
 	return pub_ips
 
 def listen_for_pub_discovery_req():
@@ -381,6 +386,7 @@ def listen_for_pub_discovery_req():
 		delim = ' '
 		print(pub_topic_dict.get(topic))
 		pubs = delim.join(pub_topic_dict.get(topic))
+		pubs = pubs.strip()
 		print(pubs)
 		pub_discovery_socket.send_string(pubs)
 	else:
@@ -407,8 +413,10 @@ def listen_for_pub_registration():
 	resp = resp.split(' ')
 	ip = resp[len(resp)-1]
 	mode = resp[1]
-	topics = resp[2:len(resp)-1]
+	topics = resp[2:len(resp)-2]
+	topic_filter = resp[len(resp)-2]
 	for topic in topics:
+		topic = f"{topic}_{topic_filter}"
 		if pub_topic_dict.get(topic) == None:
 			pub_topic_dict[topic] = {ip}
 		else:
@@ -619,6 +627,7 @@ def recover_broker():
 		for topic in topics:
 			print(topic)
 			ips = driver.get_node_if_exists(f"/pub_topic_dict/{topic}")
+			ips = ips.strip()
 			pub_topic_dict[topic] = set()
 
 			if isinstance(ips, bytes):

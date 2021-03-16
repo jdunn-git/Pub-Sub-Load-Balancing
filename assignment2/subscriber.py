@@ -88,7 +88,7 @@ broker_mode = args.broker_mode
 if not broker_mode:
     pub_ips = []
     #while len(pub_ips) == 0:
-    pub_ips = discover_publishers(broker_ip, "zipcode")
+    pub_ips = discover_publishers(broker_ip, f"zipcode_{zip_filter}")
     #    if len(pub_ips) == 0:
     #        time.sleep(1)
 
@@ -102,7 +102,7 @@ if args.record_time:
     f = open(f"{args.record_dir}/sub_{zip_filter}-{args.sub_id}.dat","a")
 
 if not broker_mode:
-    synchronized_listen(zip_filter, process_response, 10)
+    synchronized_listen("zipcode", zip_filter, process_response, 10)
     print("Done with synchronized_listen")
 else:
     # Process 10 updates

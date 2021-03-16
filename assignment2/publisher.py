@@ -20,7 +20,7 @@ print(f"Current libzmq version is {zmq.zmq_version()}")
 print(f"Current  pyzmq version is {zmq.__version__}")
 
 parser = argparse.ArgumentParser ()
-parser.add_argument ("-t", "--topic", type=str, default="zipcode temperature relhumidity", help="Topic needed")
+parser.add_argument ("-t", "--topic", type=str, default="zipcode", help="Topic needed")
 parser.add_argument ("-s", "--srv_addr", type=str, default="localhost", help="Zookeeper Server Address")
 parser.add_argument ("-b", "--broker_mode", default=False, action="store_true")
 parser.add_argument ("-z", "--zip_code", type=str, default="10001", help="Zip Code")
@@ -56,9 +56,9 @@ zip_code = int(args.zip_code)
 topic = args.topic
 
 if not broker_mode:
-    register_pub(broker_ip, topic)
+    register_pub(broker_ip, topic, zip_code)
 else:
-    register_pub_with_broker(broker_ip, topic)
+    register_pub_with_broker(broker_ip, topic, zip_code)
 
 f = None
 if args.record_time:
