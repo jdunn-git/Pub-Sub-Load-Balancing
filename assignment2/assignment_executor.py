@@ -175,7 +175,7 @@ def execute(output_dir, hosts, publishers, subscribers, ratio, broker_mode = Fal
             host_names.append(sub_hosts[subs_running].name)
             subs_running = subs_running + 1
             hosts_in_use = hosts_in_use + 1
-            time.sleep(0.1) # seconds
+            time.sleep(0.2) # seconds
 
         if pubs_running < len(pub_commands):
             print(f"Call command {pub_commands[pubs_running]} on {pub_hosts[pubs_running]}")
@@ -185,7 +185,7 @@ def execute(output_dir, hosts, publishers, subscribers, ratio, broker_mode = Fal
             host_names.append(pub_hosts[pubs_running].name)
             pubs_running = pubs_running + 1
             hosts_in_use = hosts_in_use + 1
-            time.sleep(0.1) # seconds
+            time.sleep(0.2) # seconds
 
         print(f"** Hosts to run: {hosts_to_run}, hosts in use: {hosts_in_use}")
 
