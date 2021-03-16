@@ -247,7 +247,7 @@ def listen_for_new_pubs(pub_topic, topic_filter, process_response, max_listens):
 	while not sub_thread_end:
 		topic = ""
 		ip = ""
-		try:			
+		try:
 			print("Checking for new pubs")
 			resp = sub_new_pub_socket.recv_string(flags=zmq.NOBLOCK)
 			print(f"Done checking for new pubs {resp}")
@@ -565,7 +565,7 @@ def add_broker(zk_ip, zk_port):
 
 	driver = zk.ZK_Driver(zk_ip,zk_port)
 	driver.init_driver()
-	
+
 	ip = get_local_ip()
 	ip = f'{ip}'.encode('utf-8')
 
@@ -589,7 +589,7 @@ def add_broker(zk_ip, zk_port):
 
 			print("Watching for broker znode to change")
 			driver.watch_node('/broker', watch_func)
-			
+
 			watch_lock.acquire()
 			watch_lock.release()
 
@@ -604,7 +604,7 @@ def recover_broker():
 	'''
 	topics = driver.get_children("/sub_topic_dict")
 	print(f"recovering sub topics: {topics}")
-	if topics != None:	
+	if topics != None:
 		for topic in topics:
 			print(topic)
 			ips = driver.get_node_if_exists(f"/sub_topic_dict/{topic}")
@@ -623,7 +623,7 @@ def recover_broker():
 	# pub_topic_dict
 	topics = driver.get_children("/pub_topic_dict")
 	print(f"recovering pub topics: {topics}")
-	if topics != None:	
+	if topics != None:
 		for topic in topics:
 			print(topic)
 			ips = driver.get_node_if_exists(f"/pub_topic_dict/{topic}")
@@ -632,7 +632,7 @@ def recover_broker():
 
 			if isinstance(ips, bytes):
 				ips = ips.decode("ascii")
-			
+
 			print(ips)
 
 			for ip in ips.split(' '):
@@ -653,14 +653,14 @@ def recover_broker():
 	ports_in_use = []
 	topics = driver.get_children("/sub_dict")
 	print(f"recovering sub port topics: {topics}")
-	if topics != None:	
+	if topics != None:
 		for topic in topics:
 			print(topic)
 			port = driver.get_node_if_exists(f"/sub_dict/{topic}")
 			if port != None:
 				if isinstance(port, bytes):
 					port = port.decode("ascii")
-				
+
 				ports_in_use.append(int(port))
 				sub_port_dict[topic] = int(port)
 
@@ -688,7 +688,7 @@ def update_zk(action,name,value,unique=True):
 			print(f"update value {current_value} to {new_value} to {name}")
 
 			driver.update_value(name,new_value)
-		
+
 		else:
 			ips = current_value.split()
 			print(f"ips: {ips}")
@@ -743,13 +743,13 @@ def discover_broker():
 
 		print("Watching for broker to come online")
 		driver.watch_node('/broker', watch_func)
-		
+
 		watch_lock.acquire()
 		watch_lock.release()
 
 		print("Finding broker address")
 		value = driver.get_node('/broker')
-		
+
 		if isinstance(value, bytes):
 			value = value.decode("ascii")
 
@@ -761,7 +761,7 @@ def discover_broker():
 		return value
 	else:
 		value = driver.get_node('/broker')
-		
+
 		if isinstance(value, bytes):
 			value = value.decode("ascii")
 
@@ -827,8 +827,8 @@ def monitor_broker_change():
 
 
 
-#	
-# TODO:	
+#
+# TODO:
 #
 # [DONE] 1. Make broker able to always run, both in flood mode (where it just handles discovery), and in normal broker mode
 # UPDATE: Everything is configured to enable this, but need to change the automation script
@@ -837,20 +837,20 @@ def monitor_broker_change():
 # [DONE] 2. Let broker have a normal and a "discovery" mode
 #	> This will require req-rep sockets for pub and sub registration
 #	> Also need to be aware of topics for sub registration now
-#	> This may also require moving to an XSUB socket for subs, but I'm not sure 
+#	> This may also require moving to an XSUB socket for subs, but I'm not sure
 # UPDATE: broker handles both paths fine, and doesn't need to be configured for any "mode", either.
 #		> As long as the pubs and subs are configured correctly, it'll work.
 #
 # [DONE] 3. Make "heartbeat" requests in "discovery" mode to verify if pubs are still active,
-#	and remove them if they don't respond	
+#	and remove them if they don't respond
 # 	> Better yet, let the sub connecting to the pub be the "heartbeat", so that if
 #		that request fails, it comes back to the broker and tells it about that
 # UPDATE: Heartbeat is working, and pubs can drop off the system now without it breaking the new publisher discovery paths
-# 
+#
 # [DONE] 4. Connect broker to zookeeper, and add leader selection
 # UPDATE: Broker connects to zookeeper, leader election is being performed, and new leader recovers to state of previous leader
 #
-# [    ] 5. Connect pub and sub to zookeeper to find broker leader
+# [DONE] 5. Connect pub and sub to zookeeper to find broker leader
 # UPDATE: Pubs and Subs connects to zookeeper, but params need to be adjusted to intake the
 #		zookeeper node ip instead of the broker ip (or, we could do both and have different params)
 #			> This is really close to being done, just needs these params added to the pub and sub.
