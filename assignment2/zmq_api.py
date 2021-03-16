@@ -52,6 +52,7 @@ listening_lock = Lock()
 listening_state = ""
 listening_threads = []
 new_listening_threads = [] # new threads for pubs added after initial discovery
+pub_ips = []
 broker_ip = ""
 monitor_broker = True
 
@@ -123,6 +124,7 @@ def register_sub(broker, ips, topic, topic_filter, process_response, max_listens
 
 # Receives data for the subscriber based on the registered topic
 def listen(topic_filter, index):
+	global broker_port
 	print("In listen")
 	success = False
 	while not success:
@@ -145,25 +147,36 @@ def listen(topic_filter, index):
 			sub_dict.get(topic_filter)[index] = sock
 			#sub_dict[topic_filter] = [sub_socket]
 
-			print(f"reconnected to {broker_ip} in case broker went down")
+			print(f"reconnected to {broker_ip}:{broker_port} in case broker went down")
 			time.sleep(0.5)
 
 
-def synchronized_listen_helper(topic_filter, sock, process_response, max_listens):
+def synchronized_listen_helper(topic_filter, sock, process_response, max_listens, index):
 	print("In listen helper")
 	global sync_listen_count
+	global pub_ips
 	if sock != None:
 		while sync_listen_count < max_listens:
-			print("Have socket for topic_filter %s, waiting for message" % (topic_filter))
-			string = sock.recv_string()
-			listen_count_lock.acquire()
-			# Double checking this here in case any race conditions I haven't planned for exist
-			if sync_listen_count >= max_listens:
+			try:
+				print(f"Have socket for topic_filter {topic_filter}, waiting for message {sync_listen_count}")
+				string = sock.recv_string(flags=zmq.NOBLOCK)
+				listen_count_lock.acquire()
+				# Double checking this here in case any race conditions I haven't planned for exist
+				if sync_listen_count >= max_listens:
+					listen_count_lock.release()
+					break;
+				process_response(string,sync_listen_count)
+				sync_listen_count += 1
 				listen_count_lock.release()
-				break;
-			sync_listen_count += 1
-			process_response(string,sync_listen_count)
-			listen_count_lock.release()
+			except:
+				sock.close()
+				sock = context.socket(zmq.SUB)
+				#print(pub_ips)
+				ip = pub_ips[index]
+				sock.connect(f"tcp://{ip}:5556")
+				sock.setsockopt_string(zmq.SUBSCRIBE, topic_filter)
+				time.sleep(0.25)
+
 
 def synchronized_listen(topic_filter, process_response, max_listens):
 	print("In synchronized listen")
@@ -181,7 +194,7 @@ def synchronized_listen(topic_filter, process_response, max_listens):
 			print(f"Starting new thread {i}")
 			#_thread.start_new_thread(synchronized_listen_helper,(topic_filter, 0, process_response, max_listens))
 			sock = sub_dict.get(topic_filter)[i]
-			t = Thread(target=synchronized_listen_helper, args=(topic_filter, sock, process_response, max_listens))
+			t = Thread(target=synchronized_listen_helper, args=(topic_filter, sock, process_response, max_listens, i))
 			t.start()
 			listening_threads.append(t)
 
@@ -197,6 +210,8 @@ def synchronized_listen(topic_filter, process_response, max_listens):
 	# Join all threads
 	for t in listening_threads:
 		t.join()
+
+	print("Done with original listen threads, only need to finish joining new threads")
 
 	listening_lock.acquire()
 	for t in new_listening_threads:
@@ -224,6 +239,7 @@ def listen_for_new_pubs(pub_topic, topic_filter, process_response, max_listens):
 	global new_listening_threads
 	global sub_new_pub_socket
 	global broker_ip
+	global pub_ips
 	while not sub_thread_end:
 		topic = ""
 		ip = ""
@@ -243,26 +259,28 @@ def listen_for_new_pubs(pub_topic, topic_filter, process_response, max_listens):
 			time.sleep(0.5)
 			continue
 
-		print(f"Adding a new sub for {ip}")
-		tmp_socket = context.socket(zmq.SUB)
-		tmp_socket.connect("tcp://%s:5556" % ip)
-		tmp_socket.setsockopt_string(zmq.SUBSCRIBE, topic_filter)
-		if sub_dict.get(topic_filter) == None:
-			sub_dict[topic_filter] = [tmp_socket]
-		else:
-			sub_dict[topic_filter].append(tmp_socket)
-		print("Listening to publisher at %s for %s" % (ip, topic_filter))
+		if ip not in pub_ips:
+			print(f"Adding a new sub for {ip}")
+			pub_ips.append(ip)
+			tmp_socket = context.socket(zmq.SUB)
+			tmp_socket.connect("tcp://%s:5556" % ip)
+			tmp_socket.setsockopt_string(zmq.SUBSCRIBE, topic_filter)
+			if sub_dict.get(topic_filter) == None:
+				sub_dict[topic_filter] = [tmp_socket]
+			else:
+				sub_dict[topic_filter].append(tmp_socket)
+			print("Listening to publisher at %s for %s" % (ip, topic_filter))
 
-		listening_lock.acquire()
-		if listening_state != "done":
-			print("Active listening is happening, adding thread")
-			t = Thread(target=synchronized_listen_helper, args=(topic_filter, tmp_socket, process_response, max_listens))
-			t.start()
-			new_listening_threads.append(t)
-		else:
-			print("No active listening")
+			listening_lock.acquire()
+			if listening_state != "done":
+				print("Active listening is happening, adding thread")
+				t = Thread(target=synchronized_listen_helper, args=(topic_filter, tmp_socket, process_response, max_listens))
+				t.start()
+				new_listening_threads.append(t)
+			else:
+				print("No active listening")
 
-		listening_lock.release()
+			listening_lock.release()
 
 ## Functions for broker communication ##
 
@@ -305,6 +323,7 @@ def register_pub_with_broker(ip, topic):
 		print(f"invalid response {resp}")
 
 def register_sub_with_broker(ip, topic_filter):
+	global broker_port
 	print(f"Registering suib with broker {ip}")
 	tmp_socket = context.socket(zmq.REQ)
 	tmp_socket.connect("tcp://%s:5555" % ip)
@@ -324,6 +343,7 @@ def register_sub_with_broker(ip, topic_filter):
 	sub_dict[topic_filter] = [sub_socket]
 
 def discover_publishers(ip, topic):
+	global pub_ips
 	print(f"Trying to discover (a) publisher(s) with topic {topic} through broker at tcp://{ip}:5554")
 	tmp_socket = context.socket(zmq.REQ)
 	tmp_socket.connect("tcp://%s:5552" % ip)
@@ -338,6 +358,8 @@ def discover_publishers(ip, topic):
 		return []
 
 	# resp should be a string containing all pub IPs publishing this topic
+	#for ip in resp:
+	#	pub_ips.append(ip)
 	pub_ips = resp.split()
 	return pub_ips
 
@@ -365,12 +387,12 @@ def listen_for_pub_discovery_req():
 		pub_discovery_socket.send_string("404")
 
 	# Keep a dict of sub ips that have request this topic for future updates
-	if sub_topic_dict.get(topic) == None:
-		sub_topic_dict[topic] = {ip}
-	else:
-		sub_topic_dict.get(topic).add(ip)
+	#if sub_topic_dict.get(topic) == None:
+	#	sub_topic_dict[topic] = {ip}
+	#else:
+	#	sub_topic_dict.get(topic).add(ip)
 
-	update_zk("add",f"/sub_topic_dict/{topic}",f"{ip}")
+	#update_zk("add",f"/sub_topic_dict/{topic}",f"{ip}")
 
 def listen_for_pub_registration():
 	#try:
@@ -415,6 +437,7 @@ def listen_for_pub_registration():
 	return ret
 
 def listen_for_sub_registration():
+	print("Listening for subscriber registration message")
 	string = sub_registration_socket.recv()
 	if isinstance(string, bytes):
 		string = string.decode("ascii")
@@ -431,15 +454,15 @@ def listen_for_sub_registration():
 		#sub_dict.get(topic_filter).update(sock)
 	else:
 		sock = context.socket(zmq.PUB)
+		print(f"Adding sub listener for topic filter {topic_filter} at port {sub_port}")
 		sock.bind("tcp://*:%d" % sub_port)
 		sub_port_dict[topic_filter] = sub_port
 		sub_port += 1
-		print("Adding sub listener for topic filter: %s" % topic_filter)
 		sub_dict[topic_filter] = [sock]
 		update_zk("add",f"/sub_dict/{topic_filter}",f"{sub_port}")
 
-	print(f"Telling sub to register to port {sub_port-1}")
 	resp = sub_port_dict.get(topic_filter)
+	print(f"Telling sub to register to port {resp}")
 	sub_registration_socket.send_string(str(resp))
 
 def publish_to_broker(topic, data, message_number, timestamp):
@@ -504,8 +527,14 @@ def perform_heartbeat_check(ip, topic):
 
 
 def heartbeat_response():
-	resp = pub_heartbeat_socket.recv()
-	pub_heartbeat_socket.send_string("OK")
+	while True:
+		try:
+			resp = pub_heartbeat_socket.recv()
+			print("responding to heartbeat check")
+			pub_heartbeat_socket.send_string("OK")
+		except:
+			print("heartbeat ending silently")
+			break
 
 
 # Returns the local ip address of the node this func is being called on
@@ -564,6 +593,7 @@ def recover_broker():
 	# Get each of the maps needed by zk
 
 	# sub_topic_dict
+	'''
 	topics = driver.get_children("/sub_topic_dict")
 	print(f"recovering sub topics: {topics}")
 	if topics != None:	
@@ -578,7 +608,7 @@ def recover_broker():
 
 			for ip in ips.split(' '):
 				sub_topic_dict.get(topic).add(ip)
-	
+	'''
 
 	pub_ips = set()
 
@@ -625,11 +655,11 @@ def recover_broker():
 				ports_in_use.append(int(port))
 				sub_port_dict[topic] = int(port)
 
-			sock = context.socket(zmq.PUB)
-			sock.bind("tcp://*:%d" % int(sub_port))
-			sub_dict[topic] = [sock]
+				sock = context.socket(zmq.PUB)
+				sock.bind("tcp://*:%d" % int(port))
+				sub_dict[topic] = [sock]
 		if len(ports_in_use) > 0:
-			sub_port = max(ports_in_use)
+			sub_port = max(ports_in_use) + 1
 
 
 def update_zk(action,name,value,unique=True):
@@ -651,10 +681,21 @@ def update_zk(action,name,value,unique=True):
 			driver.update_value(name,new_value)
 		
 		else:
-			new_value = current_value.replace(f"{value} ","")
+			ips = current_value.split()
+			print(f"ips: {ips}")
+			#ips.remove(value)
+			new_value = ""
+			for ip in ips:
+				if ip != value:
+					new_value += f"{ip} "
+			#new_value = new_value.jin(ips)
+			new_value = new_value.rstrip(' ')
+			print(f"delete replacing '{current_value} with '{new_value}'")
+			#new_value = current_value.replace(f"{value} ","")
 			new_value = f'{new_value}'.encode('utf-8')
 
-			print(f"delete replacing {current_value} with {new_value}")
+			#print(f"delete replacing '{current_value}' with '{new_value}'")
+			#ips.remove("tmp")
 
 			driver.update_value(name,new_value)
 	else:

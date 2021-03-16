@@ -47,10 +47,12 @@ parser.add_argument ("-i", "--sub_id", type=int, default=0, help="id of this sub
 parser.add_argument ("-w", "--record_time", default=False, action="store_true")
 parser.add_argument ("-d", "--record_dir", type=str, default="timing_data", help="Directory to store timing data")
 args = parser.parse_args ()
+print(f"args: {args}")
 
 #zk_ip = "10.0.0.7"
 zk_port = 2181
 zk_ip = args.srv_addr
+print(f"Connecting to zk at {zk_ip}")
 register_zk_driver(zk_ip, zk_port)
 broker_ip = discover_broker()
 print(f"Broker found at {broker_ip}")
@@ -65,7 +67,7 @@ print(f"Broker found at {broker_ip}")
 #srv_addr = args.srv_addr
 
 #connect_str = "tcp://" + srv_addr + ":5556"
-connect_str = f"tcp://{srv_addr}:5556"
+connect_str = f"tcp://{broker_ip}:5556"
 
 print("Collecting updates from weather server...")
 #socket.connect(connect_str)
@@ -101,6 +103,7 @@ if args.record_time:
 
 if not broker_mode:
     synchronized_listen(zip_filter, process_response, 10)
+    print("Done with synchronized_listen")
 else:
     # Process 10 updates
     for update_nbr in range(10):

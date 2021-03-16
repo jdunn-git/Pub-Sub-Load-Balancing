@@ -29,9 +29,11 @@ parser.add_argument ("-w", "--record_time", default=False, action="store_true")
 parser.add_argument ("-d", "--record_dir", type=str, default="timing_data", help="Directory to store timing data")
 args = parser.parse_args ()
 
+print(f"args: {args}")
 #zk_ip = "10.0.0.7"
 zk_port = 2181
 zk_ip = args.srv_addr
+print(f"Connecting to zk at {zk_ip}")
 register_zk_driver(zk_ip, zk_port)
 broker_ip = discover_broker()
 print(f"Broker found at {broker_ip}")
@@ -78,7 +80,7 @@ while messages_to_publish > messages_published:
     data = f"{zip_code} {temperature} {relhumidity}"
 
     #print("Sending data: %s, %i, %i" % (zipcode, temperature, relhumidity))
-    print(f"Sending data: {zip_code}, {temperature}, {relhumidity}")
+    print(f"Sending data {messages_published}: {zip_code}, {temperature}, {relhumidity}")
 
     #socket.send_string("%i %i %i" % (int(zipcode), temperature, relhumidity))
 

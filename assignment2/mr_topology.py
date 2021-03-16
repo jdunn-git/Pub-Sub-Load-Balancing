@@ -46,21 +46,23 @@ class MR_Topo(Topo):
         switch_index = 0
         # Now add the master node (host master) on rack 1, i.e., switch 1
 
-        if broker_mode:
-            # Now add the master node (host master) on rack 1, i.e., switch 1
-            host = self.addHost (f'BROKERh{host_index+1}s{switch_index+1}')
-            print("Added master host", host)
-            self.addLink (host, self.mr_switches[switch_index], delay='1ms')  # zero based indexing
-            print(f"Added link between {host} and switch {self.mr_switches[switch_index]}")
-            self.mr_hosts.append (host)
-            host_index += 1
-
-
-        host = self.addHost ('h{}s{}'.format (host_index+1, switch_index+1))
+        #if broker_mode:
+        # Now add the master node (host master) on rack 1, i.e., switch 1
+        host = self.addHost (f'ZKh{host_index+1}s{switch_index+1}')
         print("Added master host", host)
         self.addLink (host, self.mr_switches[switch_index], delay='1ms')  # zero based indexing
-        print("Added link between ", host, " and switch ", self.mr_switches[switch_index])
+        print(f"Added link between {host} and switch {self.mr_switches[switch_index]}")
         self.mr_hosts.append (host)
+        host_index += 1
+
+
+        # Now add broker node
+        host = self.addHost (f'BROKERh{host_index+1}s{switch_index+1}')
+        print("Added broker host", host)
+        self.addLink (host, self.mr_switches[switch_index], delay='1ms')  # zero based indexing
+        print(f"Added link between {host} and switch {self.mr_switches[switch_index]}")
+        self.mr_hosts.append (host)
+        host_index += 1
 
         # Now add the SUB nodes
         switch_index = 1
