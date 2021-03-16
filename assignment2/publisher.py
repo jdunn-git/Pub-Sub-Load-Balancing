@@ -20,8 +20,8 @@ print(f"Current libzmq version is {zmq.zmq_version()}")
 print(f"Current  pyzmq version is {zmq.__version__}")
 
 parser = argparse.ArgumentParser ()
-parser.add_argument ("-t", "--topic", type=str, default="zipcode temperature relhumidity", help="Topic needed")
-parser.add_argument ("-s", "--srv_addr", type=str, default="localhost", help="Server Address")
+parser.add_argument ("-t", "--topic", type=str, default="zipcode", help="Topic needed")
+parser.add_argument ("-s", "--srv_addr", type=str, default="localhost", help="Zookeeper Server Address")
 parser.add_argument ("-b", "--broker_mode", default=False, action="store_true")
 parser.add_argument ("-zk", "--zookeeper_ip", type=str, default="10.0.0.7", help="Zookeeper IP Address")
 parser.add_argument ("-zp", "--zookeeper_port", type=int, default=2181, help="Zookeeper Port")
@@ -35,14 +35,13 @@ args = parser.parse_args ()
 #zk_port = 2181
 zk_ip = args.zookeeper_ip
 zk_port = args.zookeeper_port
+print(f"Connecting to zk at {zk_ip}")
 
 register_zk_driver(zk_ip, zk_port)
 broker_ip = discover_broker()
 print(f"Broker found at {broker_ip}")
 
 #srv_addr = sys.argv[2] if len(sys.argv) > 2 else "localhost"
-#srv_addr = args.srv_addr
-srv_addr = broker_ip
 
 #broker_mode = int(sys.argv[3]) if len(sys.argv) > 3 else 0
 broker_mode = args.broker_mode
@@ -60,9 +59,9 @@ zip_code = int(args.zip_code)
 topic = args.topic
 
 if not broker_mode:
-    register_pub(srv_addr, topic)
+    register_pub(broker_ip, topic, zip_code)
 else:
-    register_pub_with_broker(srv_addr, topic)
+    register_pub_with_broker(broker_ip, topic, zip_code)
 
 f = None
 if args.record_time:
@@ -84,7 +83,7 @@ while messages_to_publish > messages_published:
     data = f"{zip_code} {temperature} {relhumidity}"
 
     #print("Sending data: %s, %i, %i" % (zipcode, temperature, relhumidity))
-    print(f"Sending data: {zip_code}, {temperature}, {relhumidity}")
+    print(f"Sending data {messages_published}: {zip_code}, {temperature}, {relhumidity}")
 
     #socket.send_string("%i %i %i" % (int(zipcode), temperature, relhumidity))
 
