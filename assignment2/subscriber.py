@@ -41,6 +41,8 @@ parser = argparse.ArgumentParser ()
 parser.add_argument ("-t", "--topic", type=str, default="zipcode temperature relhumidity", help="Topic needed")
 parser.add_argument ("-s", "--srv_addr", type=str, default="localhost", help="Server Address")
 parser.add_argument ("-b", "--broker_mode", default=False, action="store_true")
+parser.add_argument ("-zk", "--zookeeper_ip", type=str, default="10.0.0.7", help="Zookeeper IP Address")
+parser.add_argument ("-zp", "--zookeeper_port", type=int, default=2181, help="Zookeeper Port")
 parser.add_argument ("-z", "--zip_code", type=str, default="10001", help="Zip Code")
 parser.add_argument ("-e", "--executions", type=int, default=20, help="Number of executions for the program")
 parser.add_argument ("-i", "--sub_id", type=int, default=0, help="id of this subscriber")
@@ -48,8 +50,10 @@ parser.add_argument ("-w", "--record_time", default=False, action="store_true")
 parser.add_argument ("-d", "--record_dir", type=str, default="timing_data", help="Directory to store timing data")
 args = parser.parse_args ()
 
-zk_ip = "10.0.0.7"
-zk_port = 2181
+#zk_ip = "10.0.0.7"
+#zk_port = 2181
+zk_ip = args.zookeeper_ip
+zk_port = args.zookeeper_port
 register_zk_driver(zk_ip, zk_port)
 broker_ip = discover_broker()
 print(f"Broker found at {broker_ip}")
