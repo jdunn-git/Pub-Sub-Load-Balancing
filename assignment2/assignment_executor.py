@@ -80,13 +80,13 @@ def execute(output_dir, hosts, publishers, subscribers, ratio, broker_mode = Fal
         zk_commands.append(f"/opt/zookeeper/bin/zkServer.sh start")
         zk_commands.append(f"/opt/zookeeper/bin/zkServer.sh stop")
         #broker_commands.append(f"python3 ./broker.py -s {zk_ip} -m {publishers*executions}")
-        broker_commands.append(f"python3 ./broker.py -s {zk_ip} -a")
+        broker_commands.append(f"python3 ./broker.py -zk {zk_ip} -a")
         broker_commands.append(f"\n")
         # Allocate commands for publishers and subscribers
         for i in range(publishers):
             zip_holder = int(zipcode)
-            pub_commands.append(f"python3 ./publisher.py -s {zk_ip} -z {zip_holder} -b -e {executions} -w -d {output_dir}{record_dir} &> {output_dir}{hosts[host_index].name}.out")
-            #pub_commands.append(f"python3 ./publisher.py -s {zk_ip} -z {zip_holder} -b -e {executions} -w -d {output_dir}{record_dir} &")
+            pub_commands.append(f"python3 ./publisher.py -zk {zk_ip} -z {zip_holder} -b -e {executions} -w -d {output_dir}{record_dir} &> {output_dir}{hosts[host_index].name}.out")
+            #pub_commands.append(f"python3 ./publisher.py -zk {zk_ip} -z {zip_holder} -b -e {executions} -w -d {output_dir}{record_dir} &")
             pub_hosts.append(hosts[host_index])
             zipcode += 1 * pub_mod
             host_index += 1     
@@ -94,8 +94,8 @@ def execute(output_dir, hosts, publishers, subscribers, ratio, broker_mode = Fal
         zipcode = float(10101)
         for i in range(subscribers):
             zip_holder = int(zipcode)
-            sub_commands.append(f"python3 ./subscriber.py -s {zk_ip} -z {zip_holder} -b -e {int(executions/2)} -i {i} -w -d {output_dir}{record_dir} &> {output_dir}{hosts[host_index].name}.out")
-            #sub_commands.append(f"python3 ./subscriber.py -s {zk_ip} -z {zip_holder} -b -e {int(executions/2)} -i {i} -w -d {output_dir}{record_dir} &")
+            sub_commands.append(f"python3 ./subscriber.py -zk {zk_ip} -z {zip_holder} -b -e {int(executions/2)} -i {i} -w -d {output_dir}{record_dir} &> {output_dir}{hosts[host_index].name}.out")
+            #sub_commands.append(f"python3 ./subscriber.py -zk {zk_ip} -z {zip_holder} -b -e {int(executions/2)} -i {i} -w -d {output_dir}{record_dir} &")
             sub_hosts.append(hosts[host_index])
             zipcode += 1 * sub_mod
             host_index += 1
@@ -109,12 +109,11 @@ def execute(output_dir, hosts, publishers, subscribers, ratio, broker_mode = Fal
         zipcode = float(10101)
         zk_commands.append(f"/opt/zookeeper/bin/zkServer.sh start")
         zk_commands.append(f"/opt/zookeeper/bin/zkServer.sh stop")
-        broker_commands.append(f"python3 ./broker.py -s {zk_ip} -a")
+        broker_commands.append(f"python3 ./broker.py -zk {zk_ip} -a")
         broker_commands.append(f"\n")
         for i in range(publishers):
             zip_holder = int(zipcode)
-            #commands.append(f"python3 ./publisher.py -z {zip_holder} -e {executions} -w -d {output_dir}{record_dir} &> {output_dir}{hosts[host_index].name}.out")
-            pub_commands.append(f"python3 ./publisher.py -s {zk_ip} -z {zip_holder} -e {executions} -w -d {output_dir}{record_dir} &> {output_dir}{hosts[host_index].name}.out")
+            pub_commands.append(f"python3 ./publisher.py -zk {zk_ip} -z {zip_holder} -e {executions} -w -d {output_dir}{record_dir} &> {output_dir}{hosts[host_index].name}.out")
             pub_hosts.append(hosts[host_index])
             zipcode += 1 * pub_mod
             host_index += 1
@@ -123,8 +122,7 @@ def execute(output_dir, hosts, publishers, subscribers, ratio, broker_mode = Fal
         for i in range(subscribers):
             ip_holder = int(ip_end)
             zip_holder = int(zipcode)
-            #commands.append(f"python3 ./subscriber.py -s 10.0.0.{ip_holder} -z {zip_holder} -e {executions} -w -d {output_dir}{record_dir} &> {output_dir}{hosts[host_index].name}.csv")
-            sub_commands.append(f"python3 ./subscriber.py -s {zk_ip} -z {zip_holder} -e {int(executions/2)} -i {i} -w -d {output_dir}{record_dir} &> {output_dir}{hosts[host_index].name}.out")
+            sub_commands.append(f"python3 ./subscriber.py -zk {zk_ip} -z {zip_holder} -e {int(executions/2)} -i {i} -w -d {output_dir}{record_dir} &> {output_dir}{hosts[host_index].name}.out")
             sub_hosts.append(hosts[host_index])
             ip_end += 1 / ratio
             zipcode += 1 * sub_mod
