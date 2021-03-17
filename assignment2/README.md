@@ -44,18 +44,18 @@ We can run additional tests and increment the -d directoy name, and the output w
 
 ## Assignment Work Distribution
 
-#### Pub/Sub Model: Joshua Dunn (3 hours)
+#### Pub/Sub Model: Joshua Dunn and Terrence Williams (5 hours)
+* Updated assignment 1 code to be easier to build off of for assignment 2
+* Implemented better discovery logic in broker for subs to discover pubs in flood mode
+* Incorporated ZooKeeper into Pub/Sub to discover broker.
 
-#### Flooder: Joshua Dunn (3 hours)
-* Implemented the flooder architecture with time tracking
-* Iimplemented Flooder with data capture
-* Incorporate ZooKeeper
+#### Broker: Joshua Dunn (5 hours)
+* Implemented the broker and flooder architecture with time tracking
+* Incorporated ZooKeeper for leader election and recovery
 
-#### Broker: Joshua Dunn (3 hours)
-* Implemented the broker architecture.
-* Incorporate ZooKeeper
-
-#### Data Analytics: Terrence Williams (1 hour)
+#### Testing and Data Analytics: Terrence Williams (5 hour)
+* Manual testing on Mininet with ZooKeeper on and multiple brokers coming and going
+* Updated automated test scripts to have a ZooKeeper node and for multiple brokers to go offline periodically.
 * Unit test data munging
 * Data cleaning and analysis
 
