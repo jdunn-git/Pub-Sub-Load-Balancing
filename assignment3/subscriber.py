@@ -5,6 +5,7 @@ import os
 import datetime
 import time
 import _thread
+import json
 
 from zmq_api import (
     discover_broker,
@@ -20,32 +21,43 @@ from zmq_api import (
 f = None
 total_temp = 0
 
-def process_response(string, update_nbr):
+def process_response(strings, update_nbr, history_count):
     global f
     global total_temp
-    print(string)
-    zipcode, temperature, relhumidity = string.split()
-    total_temp += int(temperature)
-    #print("Average temperature for zipcode '%s' was %dF" % (
-      #zip_filter, total_temp / (update_nbr+1))
-    #)
-    print(f"Average temperature for zipcode {zip_filter} was {total_temp/ (update_nbr+1)}")
+    # Split the json data and filter based on desired history
+    print(strings)
+    data_map = json.loads(strings)
+    index = history_count - 1
+    while index >= 0:
+        if data_map.get(str(index)) != None:
+            string = data_map.get(str(index))
+            print(string)
+            zipcode, message_number, temperature, relhumidity = string.split()
+            total_temp += int(temperature)
+            #print("Average temperature for zipcode '%s' was %dF" % (
+              #zip_filter, total_temp / (update_nbr+1))
+            #)
+            #print(f"Average temperature for zipcode {zip_filter} was {total_temp/ (update_nbr+1)}")
+            print(f"Received message #{message_number}: zipcode {zipcode} was {temperature} degrees at {relhumidity} humidity")
 
-    if f != None:
-        data = f"{zipcode} {temperature} {relhumidity}"
-        timestamp = str(datetime.datetime.utcnow().timestamp())
-        f.write(f"{data} {timestamp}\n")
+            if index == 0:
+                if f != None:
+                    data = f"{zipcode} {temperature} {relhumidity}"
+                    timestamp = str(datetime.datetime.utcnow().timestamp())
+                    f.write(f"{data} {timestamp}\n")
+        index -= 1
 
 
 parser = argparse.ArgumentParser ()
 parser.add_argument ("-t", "--topic", type=str, default="zipcode temperature relhumidity", help="Topic needed")
 parser.add_argument ("-s", "--srv_addr", type=str, default="localhost", help="Zookeeper Server Address")
 parser.add_argument ("-b", "--broker_mode", default=False, action="store_true")
-parser.add_argument ("-zk", "--zookeeper_ip", type=str, default="10.0.0.7", help="Zookeeper IP Address")
+parser.add_argument ("-zk", "--zookeeper_ip", type=str, default="10.0.0.1", help="Zookeeper IP Address")
 parser.add_argument ("-zp", "--zookeeper_port", type=int, default=2181, help="Zookeeper Port")
 parser.add_argument ("-z", "--zip_code", type=str, default="10001", help="Zip Code")
 parser.add_argument ("-e", "--executions", type=int, default=20, help="Number of executions for the program")
 parser.add_argument ("-i", "--sub_id", type=int, default=0, help="id of this subscriber")
+parser.add_argument ("-c", "--history", type=int, default=5, help="Number of messages to store in history")
 parser.add_argument ("-w", "--record_time", default=False, action="store_true")
 parser.add_argument ("-d", "--record_dir", type=str, default="timing_data", help="Directory to store timing data")
 args = parser.parse_args ()
@@ -91,28 +103,28 @@ print(f"Subscribing to {zip_filter}")
 broker_mode = args.broker_mode
 if not broker_mode:
     pub_ips = []
-    #while len(pub_ips) == 0:
-    pub_ips = discover_publishers(broker_ip, f"zipcode_{zip_filter}")
-    #    if len(pub_ips) == 0:
-    #        time.sleep(1)
+    while len(pub_ips) == 0:
+        pub_ips = discover_publishers(broker_ip, f"zipcode_{zip_filter}", args.history)
+        if len(pub_ips) == 0:
+            time.sleep(1)
 
-    register_sub(broker_ip, pub_ips, "zipcode", zip_filter, process_response, 10)
+    register_sub(broker_ip, pub_ips, "zipcode", zip_filter, process_response, args.history)
 else:
-    register_sub_with_broker(broker_ip, zip_filter)
+    register_sub_with_broker(broker_ip, "zipcode", zip_filter, args.history)
 
 if args.record_time:
     if not os.path.isdir(args.record_dir):
         os.mkdir(args.record_dir)
     f = open(f"{args.record_dir}/sub_{zip_filter}-{args.sub_id}.dat","a")
 
-if not broker_mode:
-    synchronized_listen("zipcode", zip_filter, process_response, 10)
-    print("Done with synchronized_listen")
-else:
-    # Process 10 updates
-    for update_nbr in range(10):
-        string = listen(zip_filter,0)
-        process_response(string, update_nbr)
+#if not broker_mode:
+#    synchronized_listen("zipcode", zip_filter, process_response, args.executions)
+#    print("Done with synchronized_listen")
+#else:
+# Process 10 updates
+for update_nbr in range(args.executions):
+    string = listen(zip_filter,0,broker_mode)
+    process_response(string, update_nbr,args.history)
 
 if f != None:
     f.close()

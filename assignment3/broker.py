@@ -19,11 +19,12 @@ print(f"Current libzmq version is {zmq.zmq_version()}")
 print(f"Current  pyzmq version is {zmq.__version__}")
 
 parser = argparse.ArgumentParser ()
-parser.add_argument ("-zk", "--zookeeper_ip", type=str, default="10.0.0.7", help="Zookeeper IP Address")
+parser.add_argument ("-zk", "--zookeeper_ip", type=str, default="10.0.0.1", help="Zookeeper IP Address")
 parser.add_argument ("-zp", "--zookeeper_port", type=int, default=2181, help="Zookeeper Port")
 parser.add_argument ("-m", "--max_pub_count", type=int, default=-1, help="Maximum number of data propagations through broker.")
 parser.add_argument ("-k", "--keep_alive", type=int, default=-1, help="Time to keep the broker alive.")
 parser.add_argument ("-a", "--auto_mode", default=False, action="store_true")
+#parser.add_argument ("-h", "--history", type=int, default=5, help="Number of publication to store in a history.")
 args = parser.parse_args ()
 
 threads = []
@@ -60,12 +61,12 @@ def register_pubs():
 
 def process_discovery():
 	global terminating
-	try:
-		while not terminating:
-			# Listen for new subs to come onto the system
-			listen_for_pub_discovery_req()
-	except:
-			print("Pub discovery listener ended")
+	#try:
+	while not terminating:
+		# Listen for new subs to come onto the system
+		listen_for_pub_discovery_req()
+	#except:
+	#		print("Pub discovery listener ended")
 
 def pub_data_processor():
 	global terminating
