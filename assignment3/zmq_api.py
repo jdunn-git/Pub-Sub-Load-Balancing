@@ -645,6 +645,9 @@ def listen_for_sub_registration():
 
 	global sub_port
 
+	print()
+	print(f"sub_dict: {sub_dict}")
+	print(f"sub_port_dict: {sub_port_dict}")
 	if sub_dict.get(topic_filter) != None:
 		if sub_dict.get(topic_filter).get(history) != None:
 			# Note that since this sock is a PUB/SUB, I don't need to do anything to 'append' a new sub
@@ -652,13 +655,13 @@ def listen_for_sub_registration():
 			print("Appending another sub listener for topic filter: %s" % topic_filter)
 		else:
 			sock = context.socket(zmq.PUB)
-			print(f"Adding sub listener for topic filter {topic_filter} at port {sub_port} for history {history}")
+			print(f"Adding sub listener for new history {history} topic filter {topic_filter} at port {sub_port} for history {history}")
 			sock.bind("tcp://*:%d" % sub_port)
 			sub_port_dict[topic_filter][history] = sub_port
-			sub_port += 1
 			sub_dict[topic_filter] = dict()
-			sub_dict.get(topic_filter)[history] = [sock]
-			update_zk("add",f"/sub_dict/{history}/{topic_filter}",f"{sub_port}")
+			sub_dict.get(topic_filter)[history] = sock
+			update_zk("add",f"/sub_dict/{topic_filter}/{history}",f"{sub_port}")
+			sub_port += 1
 
 		#sock = context.socket(zmq.PUB)
 		#sock.bind("tcp://*:%d" % sub_port)
@@ -668,11 +671,11 @@ def listen_for_sub_registration():
 		print(f"Adding sub listener for topic filter {topic_filter} at port {sub_port} for history {history}")
 		sock.bind("tcp://*:%d" % sub_port)
 		sub_port_dict[topic_filter] = dict()
-		sub_port_dict[topic_filter][history] = sub_port
-		sub_port += 1
+		sub_port_dict.get(topic_filter)[history] = sub_port
 		sub_dict[topic_filter] = dict()
-		sub_dict.get(topic_filter)[history] = [sock]
-		update_zk("add",f"/sub_dict/{history}/{topic_filter}",f"{sub_port}")
+		sub_dict.get(topic_filter)[history] = sock
+		update_zk("add",f"/sub_dict/{topic_filter}/{history}",f"{sub_port}")
+		sub_port += 1
 
 	resp = sub_port_dict.get(topic_filter).get(history)
 	print(f"Telling sub to register to port {resp}")
@@ -779,7 +782,7 @@ def listen_for_pub_data():
 def publish_to_sub(ownership_strength, history_count, filter_key, data):
 	for topic_filter, histories in sub_dict.items():
 		if topic_filter in data:
-			for history, socks in histories.items():
+			for history, sock in histories.items():
 				if int(history_count) >= int(history):
 					# If the required history is more than the sending pub, go to the next history set
 					if int(history) > int(history_count):
@@ -796,10 +799,9 @@ def publish_to_sub(ownership_strength, history_count, filter_key, data):
 						# strength at this history value for this topic 
 						if own_str == ownership_strength:
 							# SEND
-							for sock in socks:
-								sock.send_string(data)
-								print(f"Sending Data to sub from {ownership_strength}")
-								sent = True
+							sock.send_string(data)
+							print(f"Sending Data to sub from {ownership_strength}")
+							sent = True
 						elif own_str < ownership_strength and int(hist) >= int(history):
 							# If we have a stronger owner with a good enough history, then don't send
 							print(f"There is a stronger owner than {ownership_strength} with a good enough history")
@@ -1125,20 +1127,26 @@ def monitor_broker_change():
 	global monitor_broker
 	global driver
 	while monitor_broker:
+		done_watching = False
 		try:
-			watch_lock = Lock()
-			watch_lock.acquire()
+			#watch_lock = Lock()
+			#watch_lock.acquire()
 
 			def watch_func(event):
 				print("new broker has come online")
 				time.sleep(1)
-				watch_lock.release()
+				done_watching = True
+				#watch_lock.release()
 
 			print("Watching for new broker to come online")
 			driver.watch_node('/broker', watch_func)
 
-			watch_lock.acquire()
-			watch_lock.release()
+			while not done_watching:
+				if not monitor_broker:
+					return
+				time.sleep(1)
+			#watch_lock.acquire()
+			#watch_lock.release()
 
 			print("Finding new broker address")
 			value = driver.get_node_if_exists('/broker')
