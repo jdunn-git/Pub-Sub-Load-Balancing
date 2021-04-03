@@ -56,8 +56,8 @@ def register_pubs():
 		while not terminating:
 			# Listen for new subs to come onto the system
 			listen_for_pub_registration()
-	except:
-		print("Pub registration listener ended")
+	except Exception as ex:
+		print(f"Pub registration listener ended: {ex}")
 
 def process_discovery():
 	global terminating
@@ -72,31 +72,31 @@ def pub_data_processor():
 	global terminating
 	max_pub_count = args.max_pub_count
 	pub_count = 0
-	try:
-		while not terminating:
-		# Break if we have exceeded the maximuim count
-			if (max_pub_count != -1 and pub_count >= max_pub_count):
-				print("max pub count hit")
-				terminating = True
-				disconnect()
-				sys.exit(0)
+	#try:
+	while not terminating:
+	# Break if we have exceeded the maximuim count
+		if (max_pub_count != -1 and pub_count >= max_pub_count):
+			print("max pub count hit")
+			terminating = True
+			disconnect()
+			sys.exit(0)
 
-				break
-			#else:
-			#	print(f"Max: {max_pub_count}, current: {pub_count}")
+			break
+		#else:
+		#	print(f"Max: {max_pub_count}, current: {pub_count}")
 
-			receive_pub_data()
-			pub_count += 1
-	except:
-		print("Data propagator ended")			
+		receive_pub_data()
+		pub_count += 1
+	#except Exception as ex:
+	#	print(f"Data propagator ended: {ex}")			
 
 def receive_pub_data():
 	# Get the pub message
-	string = listen_for_pub_data()
+	ownership_strength, history_count, filter_key, data = listen_for_pub_data()
 
-	if string != None:
+	if data != None:
 		# Forward published data to the appropriate subs
-		publish_to_sub(string)
+		publish_to_sub(ownership_strength, history_count, filter_key, data)
 
 
 # Register broker

@@ -18,6 +18,7 @@ sub_dict = dict()
 sub_topic_dict = dict()
 sub_port_dict = dict()
 
+
 # Keeps track of published messages like a ring buffer.
 # The pub_history_count will be used in modulo arithmetic
 # for list updates
@@ -46,6 +47,10 @@ sub_new_pub_socket = context.socket(zmq.SUB)
 # Used to heartbeat check the publishers from the broker
 pub_heartbeat_socket = context.socket(zmq.REP)
 heartbeat_sock_dict = dict()
+
+# Used for new broker information
+new_broker_listener_socket = context.socket(zmq.SUB)
+new_broker_publisher_socket = context.socket(zmq.PUB)
 
 # Starting value for the ports used by subs int this api
 sub_port = 5556
@@ -97,16 +102,15 @@ def register_pub(ip, topic, topic_filter, history):
 	if isinstance(resp, bytes):
 		resp = resp.decode("ascii")
 
-	if resp == "OK":
-		pub_socket.bind("tcp://*:5556")
-		pub_dict[topic] = pub_socket
-		print("Registered pub on tcp://*:5556")
-		pub_heartbeat_socket.bind("tcp://*:5550")
-		_thread.start_new_thread(heartbeat_response, ())
+	pub_socket.bind("tcp://*:5556")
+	pub_dict[topic] = pub_socket
+	print("Registered pub on tcp://*:5556")
+	pub_heartbeat_socket.bind("tcp://*:5550")
+	_thread.start_new_thread(heartbeat_response, ())
 
-		#print(f"listening for history requests on {topic}")
-		#pub_history_listener_thread = Thread(target=listen_for_history_requests, args=(topic,))
-		#pub_history_listener_thread.start()
+	#print(f"listening for history requests on {topic}")
+	#pub_history_listener_thread = Thread(target=listen_for_history_requests, args=(topic,))
+	#pub_history_listener_thread.start()
 
 
 
@@ -455,21 +459,13 @@ def register_pub_with_broker(ip, topic, topic_filter, history):
 	if isinstance(resp, bytes):
 		resp = resp.decode("ascii")
 
-	if resp == "OK":
-	#	print( "Registered subscriber with broker")
-		pub_broker_socket.connect("tcp://%s:5553" % ip)
-		pub_broker_socket.setsockopt( zmq.RCVTIMEO, 500 ) # milliseconds
-		pub_broker_socket.setsockopt(zmq.LINGER, 0)
-		pub_dict[topic] = pub_broker_socket
-		pub_heartbeat_socket.bind("tcp://*:5550")
-		_thread.start_new_thread(heartbeat_response, ())
-
-		#print(f"listening for history requests on {topic}")
-		#pub_history_listener_thread = Thread(target=listen_for_history_requests, args=(topic,))
-		#pub_history_listener_thread.start()
-
-	else:
-		print(f"invalid response {resp}")
+	pub_broker_socket.connect("tcp://%s:5553" % ip)
+	pub_broker_socket.setsockopt( zmq.RCVTIMEO, 500 ) # milliseconds
+	pub_broker_socket.setsockopt(zmq.LINGER, 0)
+	pub_dict[topic] = pub_broker_socket
+	pub_heartbeat_socket.bind("tcp://*:5550")
+	_thread.start_new_thread(heartbeat_response, ())
+	return resp
 
 def register_sub_with_broker(ip, topic, topic_filter, history):
 	global broker_port
@@ -525,10 +521,12 @@ def listen_for_pub_discovery_req():
 
 	if pub_topic_dict.get(topic) != None:
 		pub_ips = pub_topic_dict.get(topic).copy()
-		for history_ip in pub_ips:
-			_, ip = history_ip.split('_')
+		print(pub_ips)
+		#for ownership_history_ip in pub_ips:
+		#	_, _, ip = ownership_history_ip.split('_')
 			# This will double check that all pubs are still active before sending to the sub
-			perform_heartbeat_check(ip, topic)
+		#	perform_heartbeat_check(ip, topic)
+		#pub_ips = pub_topic_dict.get(topic).copy()
 
 		# Note: There is a small race condition where a pub goes down between the heartbeat check and here, but
 		# it is miniscule and likely not worth the time to solve
@@ -543,8 +541,10 @@ def listen_for_pub_discovery_req():
 
 		sent = False
 		print(f"Verifying {pub_ips}")
-		for history_ip in pub_ips:
-			history, ip = history_ip.split('_')
+		for ownership_history_ip in pub_ips:
+			ownership, history, ip = ownership_history_ip.split('_')
+			# Since lists are ordered in python, we can go through this list in order
+			# to check the strongest ownership first
 			print(f"Checking {history} >= {messages}")
 			if int(history) >= int(messages):
 				pub_discovery_socket.send_string(ip)
@@ -566,6 +566,7 @@ def listen_for_pub_discovery_req():
 	#update_zk("add",f"/sub_topic_dict/{topic}",f"{ip}")
 
 def listen_for_pub_registration():
+	global pub_ips
 	#try:
 	print("Listening for publisher registration message")
 	#pub_registration_socket = context.socket(zmq.REP)
@@ -581,34 +582,55 @@ def listen_for_pub_registration():
 	history = resp[len(resp)-2]
 
 	history_ip = f"{history}_{ip}"
-
+	ownership_strength = 1
+	ownership_history_ip = f"0_{history_ip}"
 	mode = resp[1]
 	topics = resp[2:len(resp)-3]
 	topic_filter = resp[len(resp)-3]
+	topic_key = ""
+
+	print(f"pub_topic_dict: '{pub_topic_dict}'")
 	for topic in topics:
 		topic = f"{topic}_{topic_filter}"
+		topic_key = topic
+		# Determine the ownership strength based on how many ips there currnelty are
 		if pub_topic_dict.get(topic) == None:
-			pub_topic_dict[topic] = {history_ip}
+			ownership_history_ip = f"1_{history_ip}"
+			print(f"Assigning ownership_strength: {ownership_history_ip}")
+			pub_topic_dict[topic] = [ownership_history_ip]
 		else:
-			pub_topic_dict[topic].add(history_ip)
+			if len(pub_topic_dict.get(topic)) == 0:
+				ownership_strength = "1"
+			else:
+				last_ownership_string, _, _ = pub_topic_dict.get(topic)[len(pub_topic_dict.get(topic))-1].split('_')
+				ownership_strength = str(int(last_ownership_string)+1)
+			ownership_history_ip = f"{str(ownership_strength)}_{history_ip}"
+			print(f"Assigning ownership_strength: {ownership_history_ip}")
+			pub_topic_dict[topic].append(ownership_history_ip)
 
-		update_zk("add",f"/pub_topic_dict/{topic}",f"{history_ip}")
+		update_zk("add",f"/pub_topic_dict/{topic}",f"{ownership_history_ip}")
 
 		# Notify sub listener when in flood mode
 		if mode == "flood":
+			# TODO: Only send this if the pub history is high enough
 			string = f"{topic} {ip}"
 			print(f"publishing new pub info {string}")
 			new_pub_sock.send_string(string)
 
-	# Start heartbeat socket for this pub
-	tmp_socket = context.socket(zmq.REQ)
-	tmp_socket.setsockopt(zmq.RCVTIMEO, 500 ) # milliseconds
-	tmp_socket.setsockopt(zmq.LINGER, 0)
-	print(f"IP is: {ip}")
-	tmp_socket.connect("tcp://%s:5550" % ip)
-	heartbeat_sock_dict[ip] = tmp_socket
+	if ip not in pub_ips:
+		pub_ips.append(ip)
+		# Start heartbeat socket for this pub
+		tmp_socket = context.socket(zmq.REQ)
+		tmp_socket.setsockopt(zmq.RCVTIMEO, 500 ) # milliseconds
+		tmp_socket.setsockopt(zmq.LINGER, 0)
+		print(f"IP is: {ip}")
+		tmp_socket.connect("tcp://%s:5550" % ip)
+		heartbeat_sock_dict[ip] = tmp_socket
 
-	pub_registration_socket.send_string("OK")
+		pub_registration_socket.send_string(str(ownership_strength))
+
+		# Start background heartbeat check
+		start_background_perform_heartbeat_check(ip)
 
 	ret = "ip %s topics %s" % (ip, topics)
 
@@ -624,22 +646,35 @@ def listen_for_sub_registration():
 	global sub_port
 
 	if sub_dict.get(topic_filter) != None:
-		# Note that since this sock is a PUB/SUB, I don't need to do anything to 'append' a new sub
-		# because the same socket will broadcast to all subs
-		print("Appending another sub listener for topic filter: %s" % topic_filter)
+		if sub_dict.get(topic_filter).get(history) != None:
+			# Note that since this sock is a PUB/SUB, I don't need to do anything to 'append' a new sub
+			# because the same socket will broadcast to all subs
+			print("Appending another sub listener for topic filter: %s" % topic_filter)
+		else:
+			sock = context.socket(zmq.PUB)
+			print(f"Adding sub listener for topic filter {topic_filter} at port {sub_port} for history {history}")
+			sock.bind("tcp://*:%d" % sub_port)
+			sub_port_dict[topic_filter][history] = sub_port
+			sub_port += 1
+			sub_dict[topic_filter] = dict()
+			sub_dict.get(topic_filter)[history] = [sock]
+			update_zk("add",f"/sub_dict/{history}/{topic_filter}",f"{sub_port}")
+
 		#sock = context.socket(zmq.PUB)
 		#sock.bind("tcp://*:%d" % sub_port)
 		#sub_dict.get(topic_filter).update(sock)
 	else:
 		sock = context.socket(zmq.PUB)
-		print(f"Adding sub listener for topic filter {topic_filter} at port {sub_port}")
+		print(f"Adding sub listener for topic filter {topic_filter} at port {sub_port} for history {history}")
 		sock.bind("tcp://*:%d" % sub_port)
-		sub_port_dict[topic_filter] = sub_port
+		sub_port_dict[topic_filter] = dict()
+		sub_port_dict[topic_filter][history] = sub_port
 		sub_port += 1
-		sub_dict[topic_filter] = [sock]
-		update_zk("add",f"/sub_dict/{topic_filter}",f"{sub_port}")
+		sub_dict[topic_filter] = dict()
+		sub_dict.get(topic_filter)[history] = [sock]
+		update_zk("add",f"/sub_dict/{history}/{topic_filter}",f"{sub_port}")
 
-	resp = sub_port_dict.get(topic_filter)
+	resp = sub_port_dict.get(topic_filter).get(history)
 	print(f"Telling sub to register to port {resp}")
 	sub_registration_socket.send_string(str(resp))
 
@@ -648,8 +683,10 @@ def listen_for_sub_registration():
 	pub_ips = pub_topic_dict[topic_key]
 	print(f"pub_topic_dict: {pub_topic_dict}, topic_key: {topic_key}, pub_ips: {pub_ips}")
 	sent = False
+	# Since lists in python are ordered, this will go through ownership strengths starting
+	# from the strongest ownership strength to the weakest
 	for val in pub_ips:
-		history_value, ip = val.split('_')
+		ownership_strength, history_value, ip = val.split('_')
 		print(f"Checking {history_value} >= {history}")
 		if int(history_value) >= int(history):
 	#		print(f"Requesting historic data from publisher to {ip}")
@@ -667,7 +704,7 @@ def listen_for_sub_registration():
 		print(f"No publisher found with history at least {history} for {topic_filter}")
 
 
-def publish_to_broker(topic, topic_filter, data, message_number, timestamp):
+def publish_to_broker(topic, topic_filter, data, message_number, ownership_strength, timestamp):
 	global pub_history_count
 	global published_message_history
 	global published_messages_count
@@ -698,7 +735,7 @@ def publish_to_broker(topic, topic_filter, data, message_number, timestamp):
 						tmp_data[i] = message
 					index -= 1
 					i += 1
-				send_str = f"{topic_filter} " + json.dumps(tmp_data)
+				send_str = f"{ownership_strength} {pub_history_count} {topic}_{topic_filter} {topic_filter} " + json.dumps(tmp_data)
 				print(f"Actually publishing: {send_str}")
 				pub_dict.get(topic).send_string(send_str)
 
@@ -735,16 +772,79 @@ def listen_for_pub_data():
 	resp = "OK"
 	pub_listener_socket.send_string(resp)
 
-	return string
+	ownership_strength, history_count, filter_key, data = string.split(' ', 3)
 
-def publish_to_sub(data):
-	for topic_filter, socks in sub_dict.items():
+	return ownership_strength, history_count, filter_key, data
+
+def publish_to_sub(ownership_strength, history_count, filter_key, data):
+	for topic_filter, histories in sub_dict.items():
 		if topic_filter in data:
-			for sock in socks:
-				sock.send_string(data)
-				print("Sending Data to sub")
+			for history, socks in histories.items():
+				if int(history_count) >= int(history):
+					# If the required history is more than the sending pub, go to the next history set
+					if int(history) > int(history_count):
+						print(f"History value {history_count} not strong enough to send. Need at least {history}")
+						continue
+					sent = False
+					print(f"*** All vals: {pub_topic_dict.get(filter_key)}")
+					# Check if this pub has the largest ownership strength for at least this history
+					for val in pub_topic_dict.get(filter_key):
+	
+						own_str, hist, ip = val.split('_')
+						# Since this list is ordered, if we get a matching ownership strength before
+						# we get a higher history value, then we know the sending pub has the highest 
+						# strength at this history value for this topic 
+						if own_str == ownership_strength:
+							# SEND
+							for sock in socks:
+								sock.send_string(data)
+								print(f"Sending Data to sub from {ownership_strength}")
+								sent = True
+						elif own_str < ownership_strength and int(hist) >= int(history):
+							# If we have a stronger owner with a good enough history, then don't send
+							print(f"There is a stronger owner than {ownership_strength} with a good enough history")
+							break 
+
+					if not sent:
+						print(f"Not the strongest owner with a strong enough history value. Strength value is {ownership_strength}")
+
+def start_background_perform_heartbeat_check(ip):
+	thread = Thread(target=background_heartbeat_check, args=(ip,))
+	thread.start()
+
+def background_heartbeat_check(ip):
+	global pub_ips
+	#ownership_strength, history_value, ip = pub_topic_value.split('_')
+	while not terminate_threads:
+		if heartbeat_sock_dict.get(ip) != None:
+			#print(f"performing heartbeat check on {ip}")
+			try:
+				heartbeat_sock_dict.get(ip).send_string("Heartbeat check")
+				heartbeat_sock_dict.get(ip).recv()
+				#print(f"heartbeat check passed {ip} for {topic}")
+			# This exception should be hit if the socket is closed on the other end
+			except:
+				print(f"heartbeat check failed, removing {ip}")
+				del heartbeat_sock_dict[ip]
+
+				for topic in pub_topic_dict:
+					for value in pub_topic_dict.get(topic):
+						_, _, tmp_ip = value.split('_')
+						if ip == tmp_ip:
+							pub_topic_dict.get(topic).remove(value)
+							update_zk("delete",f"/pub_topic_dict/{topic}",f"{value}")
+				pub_ips.remove(ip)
+				return
+
+			# Sleep for a split second
+			time.sleep(0.2)
+
+		else:
+			return
+
 
 def perform_heartbeat_check(ip, topic):
+	global pub_ips
 	if heartbeat_sock_dict.get(ip) != None:
 		print(f"performing heartbeat check on {ip}")
 		try:
@@ -756,15 +856,21 @@ def perform_heartbeat_check(ip, topic):
 			print(f"heartbeat check failed, removing {ip} for {topic}")
 			del heartbeat_sock_dict[ip]
 
-			pub_topic_dict.get(topic).remove(ip)
-			update_zk("delete",f"/pub_topic_dict/{topic}",f"{ip}")
+			# Go through all topics and remove the pub that failed the heartbeat check
+			for topic in pub_topic_dict:
+				for value in pub_topic_dict.get(topic):
+					_, _, pub_ip = value.split('_')
+					if pub_ip == ip:
+						pub_topic_dict.get(topic).remove(value)
+						update_zk("delete",f"/pub_topic_dict/{topic}",f"{value}")
+			pub_ips.remove(ip)
 
 
 def heartbeat_response():
 	while True:
 		try:
 			resp = pub_heartbeat_socket.recv()
-			print("responding to heartbeat check")
+			#print("responding to heartbeat check")
 			pub_heartbeat_socket.send_string("OK")
 		except:
 			print("heartbeat ending silently")
@@ -823,6 +929,7 @@ def add_broker(zk_ip, zk_port):
 
 def recover_broker():
 	global sub_port
+	global pub_ips
 
 	# Get each of the maps needed by zk
 
@@ -844,7 +951,6 @@ def recover_broker():
 				sub_topic_dict.get(topic).add(ip)
 	'''
 
-	pub_ips = set()
 
 	# pub_topic_dict
 	topics = driver.get_children("/pub_topic_dict")
@@ -854,16 +960,18 @@ def recover_broker():
 			print(topic)
 			ips = driver.get_node_if_exists(f"/pub_topic_dict/{topic}")
 			ips = ips.strip()
-			pub_topic_dict[topic] = set()
+			pub_topic_dict[topic] = list()
 
 			if isinstance(ips, bytes):
 				ips = ips.decode("ascii")
 
-			print(ips)
-
-			for ip in ips.split(' '):
-				pub_topic_dict.get(topic).add(ip)
-				pub_ips.add(ip)
+			print(f"ips: '{ips}'")
+			if len(ips) > 0:
+				for val in ips.split(' '):
+					pub_topic_dict.get(topic).append(val)
+					_, _, ip = val.split('_')
+					if ip not in pub_ips:
+						pub_ips.append(ip)
 
 
 	# generate heartbeat_sock_dict
@@ -874,6 +982,9 @@ def recover_broker():
 		print(f"IP is: {pub_ip}")
 		tmp_socket.connect("tcp://%s:5550" % pub_ip)
 		heartbeat_sock_dict[pub_ip] = tmp_socket
+		# Start background heartbeat check
+		start_background_perform_heartbeat_check(pub_ip)
+
 
 	# generate sub socket and ports
 	ports_in_use = []
@@ -882,17 +993,21 @@ def recover_broker():
 	if topics != None:
 		for topic in topics:
 			print(topic)
-			port = driver.get_node_if_exists(f"/sub_dict/{topic}")
-			if port != None:
-				if isinstance(port, bytes):
-					port = port.decode("ascii")
+			history_counts = driver.get_children(f"/sub_dict/{topic}")
+			for history in history_counts:
+				port = driver.get_node_if_exists(f"/sub_dict/{topic}/{history}")
+				if port != None:
+					if isinstance(port, bytes):
+						port = port.decode("ascii")
 
-				ports_in_use.append(int(port))
-				sub_port_dict[topic] = int(port)
+					ports_in_use.append(int(port))
+					sub_port_dict[topic] = dict()
+					sub_port_dict.get(topic)[history] = int(port)
 
-				sock = context.socket(zmq.PUB)
-				sock.bind("tcp://*:%d" % int(port))
-				sub_dict[topic] = [sock]
+					sock = context.socket(zmq.PUB)
+					sock.bind("tcp://*:%d" % int(port))
+					sub_dict[topic] = dict()
+					sub_dict.get(topic)[history] = sock
 		if len(ports_in_use) > 0:
 			sub_port = max(ports_in_use) + 1
 
@@ -1008,6 +1123,42 @@ def async_broker_monitor():
 def monitor_broker_change():
 	global broker_ip
 	global monitor_broker
+	global driver
+	while monitor_broker:
+		try:
+			watch_lock = Lock()
+			watch_lock.acquire()
+
+			def watch_func(event):
+				print("new broker has come online")
+				time.sleep(1)
+				watch_lock.release()
+
+			print("Watching for new broker to come online")
+			driver.watch_node('/broker', watch_func)
+
+			watch_lock.acquire()
+			watch_lock.release()
+
+			print("Finding new broker address")
+			value = driver.get_node_if_exists('/broker')
+			if value != None:
+				if isinstance(value, bytes):
+					value = value.decode("ascii")
+
+				print(f"Got a new broker address: {value}")
+				broker_ip = value
+
+		except:
+			print("Interrupted while watching for new broker")
+
+		finally:
+			time.sleep(0.5)
+
+
+def monitor_broker_change_original():
+	global broker_ip
+	global monitor_broker
 	while monitor_broker:
 		try:
 			broker_state = "Online"
@@ -1053,28 +1204,29 @@ def monitor_broker_change():
 		finally:
 			time.sleep(0.5)
 
-
-
 #
 # TODO:
 #
-# 1. Give the publisher a history - keep track using a list, index, and counter
+# [DONE] 1. Give the publisher a history - keep track using a list, index, and counter
 #	> This should loop around to the from again. This way, when a request comes
 #	  in for history items, just copy the counter, and iterate it, using modulo
 #	  to get the index inside the list.
 #
-# 2. Add the ability for pubs and broker to respond to history requests
+# [DONE] 2. Add the ability for pubs and broker to respond to history requests
 #	> Also will need to implement history requests in subscriber
 #	> Send a history request with a new request, so that you'll get the next value + the last X-1 history
+#	- This ended up needing to be a JSON object that contains the full history with each publication
 #
-# 3. Give the pubs an "Ownership" value. Store this in ZK, or even use ZK to assign it
+# [DONE] 3. Give the pubs an "Ownership" value. Store this in ZK, or even use ZK to assign it
 #	> Can be similar to the broker leader election algorithm
+#	- Not implemented like the leader election - the broker is the one that controls the propagation
+#	based on ownership strength.
 #
-# 4. Implement pub selection logic based on ownership + history
+# [DONE] 4. Implement pub selection logic based on ownership + history
 #	> If these get stored in ZK, it could be pretty easy to grab it all, then just
 #	  iterate across, or evne to just grab one at a time if they have to be independent znodes
 #
-# 5. Update the heartbeat request to add/remove brokers on a regular interval
+# [DONE] 5. Update the heartbeat request to add/remove pubs on a regular interval
 #	instead of on a new sub coming online.
 #	> Could even flip it so that pubs are pushing their heartbeat, and the sub checks it.
 #	> Then, if a pub doesn't send a heartbeat for (2) seconds, then it will be remove from
@@ -1087,19 +1239,17 @@ def monitor_broker_change():
 #		>> So everything might be the same as you have it now, only with a key between root and pub_topic_dict,
 #		   like /1/pub_topic dict, /2/pub_topic_dict, etc.
 #
-# 7. Make publishers "publish" to their list (or to the broker, and the broker do the same), and then the request
-#	from pub to sub pulls from that is all
-#	> This will require subs to request data from publihsers, unfortunately
-#	> We also need to support publishers going offline, and subs getting the data again. 
+# 7. Fix Pub/Sub broker discovery logic, to be able to recognize when to shift brokers.
+#	> Current logic has a bug where Subs don't terminate when they're done because of how it works
+#	> Need to be able to register, and then receive a notification message.
+#	> Can round-robin for node in zk for initial connection, then brokers can load balance correctly
+#	> Notification coming back from broker can be a different broker ip to connect to instead
 #
-# - I can probably fix the pub/sub broker watch issue by making the brokers sleep for 2 seconds after seeing
-#	another broker go down.
-#
-# 8. Make Subs and Pubs listen on a port for new brokers instead of watching
-#	(after they've already been assigned a broker)
-#
-# 9. Make brokers tell the pub and sub when to connect to a new broker
+# 8. Make brokers tell the pub and sub when to connect to a new broker
 #	> Either on recovery, or when load balancing - the same algorithm can apply
 #
+#
+# Other TODOs:  - Sub needs to terminate correctly after receiving all messages
+#				- Sub ports are not adding/removing corectly in zk
 #
 #

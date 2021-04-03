@@ -59,10 +59,12 @@ zip_code = int(args.zip_code)
 #topic = "zipcode temperature relhumidity"
 topic = args.topic
 
+ownership_strength = "0"
+
 if not broker_mode:
     register_pub(broker_ip, topic, zip_code, args.history)
 else:
-    register_pub_with_broker(broker_ip, topic, zip_code, args.history)
+    ownership_strength = register_pub_with_broker(broker_ip, topic, zip_code, args.history)
 
 f = None
 if args.record_time:
@@ -97,7 +99,7 @@ while messages_to_publish > messages_published:
     if not broker_mode:
         publish(topic, zip_code, data, messages_published+1, datetime.datetime.utcnow().timestamp())
     else:
-        publish_to_broker(topic, zip_code, data, messages_published+1, datetime.datetime.utcnow().timestamp())
+        publish_to_broker(topic, zip_code, data, messages_published+1, ownership_strength, datetime.datetime.utcnow().timestamp())
     time.sleep(0.5)
     messages_published += 1
 

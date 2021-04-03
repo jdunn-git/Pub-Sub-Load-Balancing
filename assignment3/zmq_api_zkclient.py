@@ -387,3 +387,14 @@ class ZK_Driver ():
         except:
             print("Exception thrown getting children of znode: ", sys.exc_info()[0])
             return
+
+    #def get_or_watch_node(self, name, func):
+    #    try:
+    #        print ("Checking if {} exists".format(name))
+    #        if self.zk.exists (name):
+    #            print ("{} znode indeed exists; get value".format(name))
+    #        else:
+    #            print ("{} znode does not exist; watching".format(name))
+    #    except:            
+    #        print("Exception thrown trying to get or watch znode: ", sys.exc_info()[0])
+    #        return
