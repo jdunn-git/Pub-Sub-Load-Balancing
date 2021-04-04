@@ -86,6 +86,10 @@ pub_sub_broker_key = 0
 broker_id = "0"
 broker_keys = []
 
+in_broker_recovery = False
+
+zk_ip = ""
+zk_port = 0
 
 def close_context():
 	context.destroy()
@@ -439,7 +443,14 @@ def listen_for_new_pubs(pub_topic, topic_filter, process_response, max_listens):
 
 # Registers the broker send and receive socks: 1. to get notified of all active pubs and subs,
 # 2. to receive published messages, and 3. to send published messages to the subscribers
-def register_broker(zk_ip, zk_port):
+def register_broker(z_ip, z_port):
+	global driver
+	global zk_ip
+	global zk_port
+	zk_ip = z_ip
+	zk_port = z_port
+
+
 	pub_discovery_socket.bind("tcp://*:5552")
 
 	pub_listener_socket.bind("tcp://*:5553")
@@ -448,6 +459,10 @@ def register_broker(zk_ip, zk_port):
 	sub_registration_socket.bind("tcp://*:5555")
 
 	new_pub_sock.bind("tcp://*:5551")
+
+	driver = zk.ZK_Driver(zk_ip,zk_port)
+	driver.init_driver()
+	driver.start_session()
 
 	add_broker(zk_ip, zk_port)
 
@@ -579,6 +594,8 @@ def listen_for_pub_discovery_req():
 
 def listen_for_pub_registration():
 	global pub_ips
+	global pub_topic_dict
+	global broker_keys
 	#try:
 	print("Listening for publisher registration message")
 	#pub_registration_socket = context.socket(zmq.REP)
@@ -588,6 +605,7 @@ def listen_for_pub_registration():
 	resp = pub_registration_socket.recv()
 	if isinstance(resp, bytes):
 		resp = resp.decode("ascii")
+	print(f"broker_keys: {broker_keys}")
 	print("Got a publisher registration message: %s" % resp)
 	resp = resp.split(' ')
 	ip = resp[len(resp)-1]
@@ -846,8 +864,9 @@ def start_background_perform_heartbeat_check(ip):
 def background_heartbeat_check(ip):
 	global pub_ips
 	global broker_keys
+	global restarting_broker
 	#ownership_strength, history_value, ip = pub_topic_value.split('_')
-	while not terminate_threads:
+	while not terminate_threads and not restarting_broker:
 		if heartbeat_sock_dict.get(ip) != None:
 			#print(f"performing heartbeat check on {ip}")
 			try:
@@ -856,6 +875,8 @@ def background_heartbeat_check(ip):
 				#print(f"heartbeat check passed {ip} for {topic}")
 			# This exception should be hit if the socket is closed on the other end
 			except:
+				if restarting_broker:
+					return
 				print(f"heartbeat check failed, removing {ip}")
 				if ip in heartbeat_sock_dict:
 					del heartbeat_sock_dict[ip]
@@ -935,21 +956,26 @@ def add_broker(zk_ip, zk_port):
 	global brokers_in_use
 	global broker_id
 	global broker_keys
-	
-	driver = zk.ZK_Driver(zk_ip,zk_port)
-	driver.init_driver()
+	global restarting_broker
+	global terminate_threads
 
 	ip = get_local_ip()
 	ip = f'{ip}'.encode('utf-8')
 
 	print(ip)
 
-	driver.start_session()
+	brokers_in_use = "1"
+	broker_id = "0"
+	broker_keys = []
+
+	restarting_broker = True
+
 	leader = False
-	while not leader:
+	while not leader and not terminate_threads:
 		try:
 			# Get brokers in use
 			# Watch each broker in use
+			print("Trying to add/reset broker")
 			brokers_count = driver.get_node_if_exists('/brokers_in_use')
 			if brokers_count == None:
 				print("Did not find brokers_in_use znode")
@@ -960,7 +986,7 @@ def add_broker(zk_ip, zk_port):
 			if isinstance(brokers_in_use, bytes):
 				brokers_in_use = brokers_in_use.decode("ascii")
 
-			for i in range(6):
+			for i in range(3):
 				try:
 					driver.add_node(f'/broker/{i}',ip,False)
 					leader = True
@@ -1017,6 +1043,31 @@ def recover_broker():
 	global sub_port
 	global pub_ips
 	global broker_keys
+	global restarting_broker
+	global pub_topic_dict
+	global in_broker_recovery
+
+	in_broker_recovery = True
+	restarting_broker = False
+
+	sub_port = 5556
+	
+	# Reset all dicts
+	for key, v in pub_topic_dict.copy().items():
+		del pub_topic_dict[key]
+	#for key, v in heartbeat_sock_dict.copy().items():
+	#	del heartbeat_sock_dict[key]
+	for key, v in sub_port_dict.copy().items():
+		del sub_port_dict[key]
+	for key, v in sub_dict.copy().items():
+		del sub_dict[key]
+
+
+	#pub_topic_dict = dict()
+	#heartbeat_sock_dict = dict()
+	#sub_port_dict = dict()
+	#sub_dict = dict()
+
 
 	# Get each of the maps needed by zk
 
@@ -1042,6 +1093,8 @@ def recover_broker():
 	# pub_topic_dict
 	for i in range(6):
 		pub_topic_dict[str(i)] = dict()
+
+	print(f"Recovering pub_topic_dict: {pub_topic_dict}")
 
 	brokers = driver.get_children("/pub_topic_dict")
 	if brokers != None:
@@ -1069,16 +1122,21 @@ def recover_broker():
 
 
 	# generate heartbeat_sock_dict
+	for ip, v in heartbeat_sock_dict.copy().items():
+		if ip not in pub_ips:
+			del heartbeat_sock_dict[ip]
 	for pub_ip in pub_ips:
-		tmp_socket = context.socket(zmq.REQ)
-		tmp_socket.setsockopt(zmq.RCVTIMEO, 500 ) # milliseconds
-		tmp_socket.setsockopt(zmq.LINGER, 0)
-		print(f"IP is: {pub_ip}")
-		tmp_socket.connect("tcp://%s:5550" % pub_ip)
-		heartbeat_sock_dict[pub_ip] = tmp_socket
-		# Start background heartbeat check
-		start_background_perform_heartbeat_check(pub_ip)
+		if heartbeat_sock_dict.get(pub_ip) == None:
+			tmp_socket = context.socket(zmq.REQ)
+			tmp_socket.setsockopt(zmq.RCVTIMEO, 500 ) # milliseconds
+			tmp_socket.setsockopt(zmq.LINGER, 0)
+			print(f"IP is: {pub_ip}")
+			tmp_socket.connect("tcp://%s:5550" % pub_ip)
+			heartbeat_sock_dict[pub_ip] = tmp_socket
+			# Start background heartbeat check
+			start_background_perform_heartbeat_check(pub_ip)
 
+	in_broker_recovery = False
 
 	# generate sub socket and ports
 	ports_in_use = []
@@ -1115,6 +1173,7 @@ def recover_broker():
 
 def update_broker_count():
 	global brokers_in_use
+	global broker_id
 
 	# Get pub_sub_count
 	pub_sub_count = driver.get_node_if_exists('/pub_sub_count')
@@ -1144,8 +1203,10 @@ def update_broker_count():
 
 	# If broker count is changing, then delete the maps and corresponding znodes
 	brokers_in_use = str(pub_sub_count_int)
-	if int(brokers_in_use) > 3:
+	if int(brokers_in_use) >= 3:
 		brokers_in_use = str(3)
+	if brokers_in_use == "0":
+		brokers_in_use = "1"
 
 	print(f"brokers_in_use is being updated to {brokers_in_use}")
 	driver.update_value(f'/brokers_in_use',f"{brokers_in_use}".encode('utf-8'))
@@ -1156,30 +1217,50 @@ def update_broker_count():
 	ip = get_local_ip()
 	ip = f'{ip}'.encode('utf-8')
 
-	# Now that we updated the broker keys, we can try to create the other nodes
-	for key in broker_keys:
-		if key == broker_id:
-			continue
-		else:
-			try:
-				print(f"Updating broker znode {key}")
-				driver.update_value(f'/broker/{key}',ip)
-			except Exception as ex:
-				print(f"could not update {i}: {ex}")
 
+	# Now that we updated the broker keys, we can try to create the other nodes
+	#for key in broker_keys:
+	#	if key == broker_id:
+	#		continue
+	#	else:
+	#		try:
+	#			print(f"Updating broker znode {key}")
+	#			driver.update_value(f'/broker/{key}',ip)
+	#		except Exception as ex:
+	#			print(f"could not update {i}: {ex}")
+
+def reconfigure_broker_nodes():
+	global broker_keys
+	global driver
+	global broker_id
+
+	ip = get_local_ip()
+	ip = f'{ip}'.encode('utf-8')
+
+	print(f"Broker is reconfiguring - broker_id: {broker_id}, broker_keys: {broker_keys}")
 	# Reset pub_topic_dict for keys not applicable
 	for i in range(6):
-		if str(i) not in broker_keys:
-			pub_topic_dict[str(i)] = dict()
+		if str(i) in broker_keys:
+			try:
+				val = driver.get_node_if_exists(f'/broker/{i}')
+				print(f"Comparing id {i}, {val} should be {ip}")
+				if val == None:
+					print(f"Updating broker znode {i} from ")
+					driver.add_node(f'/broker/{i}',ip,False)
+				if val != ip:
+					print(f"Updating broker znode {i} from ")
+					driver.update_value(f'/broker/{i}',ip)
+			except Exception as ex:
+				print(f"could not update {i}: {ex}")
+		else:
+			#pub_topic_dict[str(i)] = dict()
 			# Update the znode that belong to this node but shouldn't
 			val = driver.get_node(f'/broker/{i}')
-			print(f"Comparing {val} with {ip}")
+			print(f"Comparing id {i}, {val} shouldn't be {ip}")
 			if val == ip:
 				print(f"Deleting znode {i} that has a value {val}!!")
 				driver.delete_node(f'/broker/{i}')
 
-
-	recover_broker()
 
 
 def start_broker_count_watcher():
@@ -1191,8 +1272,11 @@ def background_broker_count_watcher():
 	global terminate_threads
 	global brokers_in_use
 	global done_watching
-
-	while not terminate_threads:
+	global restarting_broker
+	global zk_ip
+	global zk_port
+	
+	while not terminate_threads and not restarting_broker:
 		done_watching = False
 		try:
 			#watch_lock = Lock()
@@ -1212,6 +1296,7 @@ def background_broker_count_watcher():
 				if terminate_threads:
 					return
 				time.sleep(1)
+			print("FINALLY DONE WATCHING")
 			#watch_lock.acquire()
 			#watch_lock.release()
 
@@ -1223,20 +1308,38 @@ def background_broker_count_watcher():
 					broker_count = broker_count.decode("ascii")
 
 				brokers_in_use = broker_count
-				set_broker_keys()
 
 				ip = get_local_ip()
 				ip = f'{ip}'.encode('utf-8')
 
-				for i in range(6):
-					if str(i) in broker_keys:
-						# Update the znode that don't belong to this node but should
-						val = driver.get_node(f'/broker/{i}')
-						print(f"Comparing {val} with {ip}")
-						if val != ip:
-							driver.update_value(f'/broker/{i}',ip)
+				print(f"Comparing brokers_in_use {brokers_in_use} with broker_id {broker_id}")
+				if int(brokers_in_use) < 3 and int(brokers_in_use) < int(broker_id)+1:
 
-				recover_broker()
+					# We don't want to do this on the first broker if brokers_in_use is 0
+					if brokers_in_use != "0" or broker_id != "1":
+						#for i in range(6):
+						#	if str(i) in broker_keys:
+						#		# Deletee the znode that belong to this node but shouldn't anymore
+						#		val = driver.get_node(f'/broker/{i}')
+						#		print(f"Comparing {val} with {ip}")
+						#		if val == ip:
+						#			driver.delete_node(f'/broker/{i}')
+						# Call add_broker to reset this broker
+						add_broker(zk_ip, zk_port)
+						return
+
+				thread = Thread(target=background_broker_watcher_actions, args=())
+				thread.start()
+
+				#for i in range(6):
+				#	if str(i) in broker_keys:
+				#		# Update the znode that don't belong to this node but should
+				#		val = driver.get_node(f'/broker/{i}')
+				#		print(f"Comparing {val} with {ip}")
+				#		if val != ip:
+				#			driver.update_value(f'/broker/{i}',ip)
+
+				#recover_broker()
 
 		except Exception as ex:
 			print(f"Interrupted while watching primary broker count: {ex}")
@@ -1244,6 +1347,10 @@ def background_broker_count_watcher():
 		finally:
 			time.sleep(0.5)
 
+def background_broker_watcher_actions():
+	set_broker_keys()
+	reconfigure_broker_nodes()
+	recover_broker()
 
 def set_broker_keys():
 	global broker_id
@@ -1254,22 +1361,28 @@ def set_broker_keys():
 
 	# Set broker keys
 	if broker_id == "0":
-		if brokers_in_use == "1":
+		if brokers_in_use == "1" or brokers_in_use == "0":
 			broker_keys = ["0", "1", "2", "3", "4", "5"]
 		elif brokers_in_use == "2":
 			broker_keys = ["0", "2", "3"]
 		elif brokers_in_use == "3":
 			broker_keys = ["0", "3"]
+		else:
+			broker_keys = []
 
 	elif broker_id == "1":
 		if brokers_in_use == "2":
 			broker_keys = ["1", "4", "5"]
 		elif brokers_in_use == "3":
 			broker_keys = ["1", "4"]
+		else:
+			broker_keys = []
 
 	elif broker_id == "2":
 		if brokers_in_use == "3":
 			broker_keys = ["2", "5"]
+		else:
+			broker_keys = []
 	else:
 		print(f"Invalid broker ID: {broker_id}")
 		raise Exception(f"Invalid broker ID: {broker_id}")
@@ -1349,7 +1462,7 @@ def decrement_pub_sub():
 
 
 # Used by pub and sub to get the broker's ip address
-def discover_broker(topic, topic_filter):
+def discover_broker(topic, topic_filter, isPub):
 	global broker_ip
 	global broker_id
 	global pub_sub_broker_key
@@ -1367,10 +1480,19 @@ def discover_broker(topic, topic_filter):
 
 	print(pub_sub_broker_key)
 
-	new_val = int(pub_sub_broker_key)+1
-
-	driver.update_value('/pub_sub_count',f"{new_val}".encode('utf-8'))
-
+	# After testing, I made this only increment when pubs come online, here's why:
+	# In broker mode, lets say you have 2 pubs and 100 subs.
+	# This would normally cause load balancing to distribute across the nodes.
+	# But the publishers are only publishing to one broker though, so there's no way to
+	# get the data to other brokers without causing pubs to publish to two brokers at once,
+	# which would cause additional traffic and be counter productive. It doesn't help if
+	# we load balance and then still send every message to each brokers, because then our net
+	# traffic scales with our broker count scales up, which is bad.
+	# The pub pushing to a single broker is critical to knowing how to properly load balance. 
+	# Therefore, we are only load balancing this when additional pubs come online.
+	if isPub:
+		new_val = int(pub_sub_broker_key)+1
+		driver.update_value('/pub_sub_count',f"{new_val}".encode('utf-8'))
 
 	# Since 6 is 3!, meaning this value should be from 0 - 5
 	pub_sub_broker_key = str(int(pub_sub_broker_key) % 6)
@@ -1581,10 +1703,10 @@ def check_for_filter(filter):
 #	- I accomplished this by using ZK - basically the pubs and subs will keep watching their
 #	partition of the broker znodes
 #
-# 9. From testing, the brokers aren't reconfiguring correctly after the load balancing scales up,
+# [Mostly Done] 9. From testing, the brokers aren't reconfiguring correctly after the load balancing scales up,
 #	 then down, and then back up. Need to figure out why not.
 #
-# 10. Test broker load balancing changes more extrensively
+# [Mostly Done] 10. Test broker load balancing changes more extrensively
 #	> Manual multi-subscriber load-balacing broker mode test
 #	> Manual load-balacing flood mode tests
 #	> Manual testing for load balancing + recovery code together

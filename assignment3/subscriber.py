@@ -71,7 +71,7 @@ zk_port = args.zookeeper_port
 print(f"Connecting to zk at {zk_ip}")
 
 register_zk_driver(zk_ip, zk_port)
-broker_ip = discover_broker("zipcode", args.zip_code)
+broker_ip = discover_broker("zipcode", args.zip_code, False)
 print(f"Broker found at {broker_ip}")
 
 #  Socket to talk to server
@@ -130,5 +130,4 @@ for update_nbr in range(args.executions):
 if f != None:
     f.close()
 
-decrement_pub_sub()
 disconnect()

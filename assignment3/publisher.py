@@ -40,7 +40,7 @@ zk_port = args.zookeeper_port
 print(f"Connecting to zk at {zk_ip}")
 
 register_zk_driver(zk_ip, zk_port)
-broker_ip = discover_broker(args.topic, args.zip_code)
+broker_ip = discover_broker(args.topic, args.zip_code, True)
 print(f"Broker found at {broker_ip}")
 
 #srv_addr = sys.argv[2] if len(sys.argv) > 2 else "localhost"
