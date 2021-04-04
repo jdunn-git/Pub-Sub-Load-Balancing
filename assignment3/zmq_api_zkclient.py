@@ -388,6 +388,28 @@ class ZK_Driver ():
             print("Exception thrown getting children of znode: ", sys.exc_info()[0])
             return
 
+    def delete_node(self, name):
+        try:
+
+            # Now we are going to check if the znode that we just created
+            # exists or not. Note that a watch can be set on create, exists
+            # and get/set methods
+            #print ("Checking if {} exists (it better be)".format(name))
+            if self.zk.exists (name):
+                #print ("{} znode indeed exists; get value".format(name))
+
+                # Now acquire the value and stats of that znode
+                #value,stat = self.zk.get (self.zkName, watch=self.watch)
+                value = self.zk.delete (name)
+               # print(("Details of znode {}: value = {}, stat = {}".format (name, value, stat)))
+                return value
+            else:
+                print ("{} znode does not exist, why?".format(name))
+
+        except:
+            print("Exception thrown deleting znode: ", sys.exc_info()[0])
+            return
+
     #def get_or_watch_node(self, name, func):
     #    try:
     #        print ("Checking if {} exists".format(name))

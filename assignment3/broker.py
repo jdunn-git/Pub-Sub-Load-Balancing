@@ -61,12 +61,12 @@ def register_pubs():
 
 def process_discovery():
 	global terminating
-	#try:
-	while not terminating:
-		# Listen for new subs to come onto the system
-		listen_for_pub_discovery_req()
-	#except:
-	#		print("Pub discovery listener ended")
+	try:
+		while not terminating:
+			# Listen for new subs to come onto the system
+			listen_for_pub_discovery_req()
+	except:
+			print("Pub discovery listener ended")
 
 def pub_data_processor():
 	global terminating
@@ -92,11 +92,11 @@ def pub_data_processor():
 
 def receive_pub_data():
 	# Get the pub message
-	ownership_strength, history_count, filter_key, data = listen_for_pub_data()
+	ownership_strength, history_count, filter_key, br_id, data = listen_for_pub_data()
 
 	if data != None:
 		# Forward published data to the appropriate subs
-		publish_to_sub(ownership_strength, history_count, filter_key, data)
+		publish_to_sub(ownership_strength, history_count, filter_key, br_id, data)
 
 
 # Register broker
