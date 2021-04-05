@@ -79,7 +79,7 @@ def execute(output_dir, hosts, publishers, subscribers, ratio, broker_mode = Fal
         pub_mod = ratio
 
     if broker_mode:
-        host_index = 2
+        host_index = 6
         ip_holder = 1
         zipcode = float(10101)
         # Allocate first host as broker
@@ -87,7 +87,8 @@ def execute(output_dir, hosts, publishers, subscribers, ratio, broker_mode = Fal
         zk_commands.append(f"/opt/zookeeper/bin/zkServer.sh start")
         zk_commands.append(f"/opt/zookeeper/bin/zkServer.sh stop")
         #broker_commands.append(f"python3 ./broker.py -s {zk_ip} -m {publishers*executions}")
-        broker_commands.append(f"python3 ./broker.py -zk {zk_ip} -k 5")
+        #broker_commands.append(f"python3 ./broker.py -zk {zk_ip} -k 20")
+        broker_commands.append(f"python3 ./broker.py -zk {zk_ip}")
         #broker_commands.append(f"python3 ./broker.py -zk {zk_ip} -a")
         broker_commands.append(f"^C")
         # Allocate commands for publishers and subscribers
@@ -102,7 +103,7 @@ def execute(output_dir, hosts, publishers, subscribers, ratio, broker_mode = Fal
         zipcode = float(10101)
         for i in range(subscribers):
             zip_holder = int(zipcode)
-            sub_commands.append(f"python3 ./subscriber.py -zk {zk_ip} -z {zip_holder} -b -e {int(executions/2)} -i {i} -w -d {output_dir}{record_dir} &> {output_dir}{hosts[host_index].name}.out")
+            sub_commands.append(f"python3 ./subscriber.py -zk {zk_ip} -z {zip_holder} -b -e {int(executions/3)} -i {i} -w -d {output_dir}{record_dir} &> {output_dir}{hosts[host_index].name}.out")
             #sub_commands.append(f"python3 ./subscriber.py -zk {zk_ip} -z {zip_holder} -b -e {int(executions/2)} -i {i} -w -d {output_dir}{record_dir} &")
             sub_hosts.append(hosts[host_index])
             zipcode += 1 * sub_mod
@@ -112,12 +113,13 @@ def execute(output_dir, hosts, publishers, subscribers, ratio, broker_mode = Fal
                 zipcode = float(10101)
 
     else:
-        host_index = 2
+        host_index = 6
         ip_end = float(1)
         zipcode = float(10101)
         zk_commands.append(f"/opt/zookeeper/bin/zkServer.sh start")
         zk_commands.append(f"/opt/zookeeper/bin/zkServer.sh stop")
-        broker_commands.append(f"python3 ./broker.py -zk {zk_ip} -k 5")
+        #broker_commands.append(f"python3 ./broker.py -zk {zk_ip} -k 5")
+        broker_commands.append(f"python3 ./broker.py -zk {zk_ip}")
         #broker_commands.append(f"python3 ./broker.py -zk {zk_ip} -a")
         broker_commands.append(f"^C")
         for i in range(publishers):
@@ -131,7 +133,7 @@ def execute(output_dir, hosts, publishers, subscribers, ratio, broker_mode = Fal
         for i in range(subscribers):
             ip_holder = int(ip_end)
             zip_holder = int(zipcode)
-            sub_commands.append(f"python3 ./subscriber.py -zk {zk_ip} -z {zip_holder} -e {int(executions/2)} -i {i} -w -d {output_dir}{record_dir} &> {output_dir}{hosts[host_index].name}.out")
+            sub_commands.append(f"python3 ./subscriber.py -zk {zk_ip} -z {zip_holder} -e 10 -i {i} -w -d {output_dir}{record_dir} &> {output_dir}{hosts[host_index].name}.out")
             sub_hosts.append(hosts[host_index])
             ip_end += 1 / ratio
             zipcode += 1 * sub_mod
@@ -148,7 +150,7 @@ def execute(output_dir, hosts, publishers, subscribers, ratio, broker_mode = Fal
     pubs_running = 0
     subs_running = 0
     hosts_to_run = len(sub_commands)+len(pub_commands)
-    hosts_to_run = hosts_to_run + 2
+    hosts_to_run = hosts_to_run + 6
     #if broker_mode:
     #    hosts_to_run = hosts_to_run + 1
 
@@ -164,19 +166,34 @@ def execute(output_dir, hosts, publishers, subscribers, ratio, broker_mode = Fal
             # sleep to allow time for zk to come up before starting broker
             time.sleep(3) # seconds
 
-            print(f"Call command {broker_commands[0]} on {hosts[0]}")
-            thread = threading.Thread(target=hosts[0].cmdPrint, args=(broker_commands[0],))
-            #thread.start()
+            for i in range(6):
+                print(f"Call command {broker_commands[0]} on {hosts[i]}")
+                thread = threading.Thread(target=hosts[i].cmdPrint, args=(broker_commands[0],))
+                thread.start() 
+                time.sleep(2)
+                host_threads.append(thread)
+                host_names.append(hosts[hosts_in_use].name)
+                hosts_in_use = hosts_in_use + 1
+                #thread = threading.Thread(target=cycle_broker, args=(hosts, broker_commands, host_threads, i, ))
+                #thread.start()
+                #time.sleep(1)
+               
+                #print(f"Call command {broker_commands[0]} on {hosts[1]}")
+                #thread = threading.Thread(target=hosts[1].cmdPrint, args=(broker_commands[0],))
+                #thread.start()
+                #host_threads.append(thread)
+                #host_names.append(hosts[hosts_in_use].name)
+                #hosts_in_use = hosts_in_use + 1
+
+        if pubs_running < len(pub_commands):
+            print(f"Call command {pub_commands[pubs_running]} on {pub_hosts[pubs_running]}")
+            thread = threading.Thread(target=pub_hosts[pubs_running].cmdPrint, args=(pub_commands[pubs_running],))
+            thread.start()
             host_threads.append(thread)
-            host_names.append(hosts[hosts_in_use].name)
+            host_names.append(pub_hosts[pubs_running].name)
+            pubs_running = pubs_running + 1
             hosts_in_use = hosts_in_use + 1
-           
-            print(f"Call command {broker_commands[0]} on {hosts[1]}")
-            thread = threading.Thread(target=hosts[1].cmdPrint, args=(broker_commands[0],))
-            #thread.start()
-            host_threads.append(thread)
-            host_names.append(hosts[hosts_in_use].name)
-            hosts_in_use = hosts_in_use + 1
+            time.sleep(0.5) # seconds
 
         if subs_running < len(sub_commands):
             print(f"Call command {sub_commands[subs_running]} on {sub_hosts[subs_running]}")
@@ -187,31 +204,25 @@ def execute(output_dir, hosts, publishers, subscribers, ratio, broker_mode = Fal
             host_names.append(sub_hosts[subs_running].name)
             subs_running = subs_running + 1
             hosts_in_use = hosts_in_use + 1
-            time.sleep(0.2) # seconds
-
-        if pubs_running < len(pub_commands):
-            print(f"Call command {pub_commands[pubs_running]} on {pub_hosts[pubs_running]}")
-            thread = threading.Thread(target=pub_hosts[pubs_running].cmdPrint, args=(pub_commands[pubs_running],))
-            thread.start()
-            host_threads.append(thread)
-            host_names.append(pub_hosts[pubs_running].name)
-            pubs_running = pubs_running + 1
-            hosts_in_use = hosts_in_use + 1
-            time.sleep(0.2) # seconds
+            time.sleep(0.5) # seconds
 
         print(f"** Hosts to run: {hosts_to_run}, hosts in use: {hosts_in_use}")
 
-    host_threads[1].start()
-    host_threads[2].start()
-    thread = threading.Thread(target=cycle_broker, args=(hosts, broker_commands, host_threads, 0, ))
-    thread.start()
+    #host_threads[0].start()
+    #host_threads[1].start()
+    #host_threads[2].start()
+    #host_threads[3].start()
+    #host_threads[4].start()
+    #host_threads[5].start()
+    #thread = threading.Thread(target=cycle_broker, args=(hosts, broker_commands, host_threads, 0, ))
+    #thread.start()
     time.sleep(2)
-    thread = threading.Thread(target=cycle_broker, args=(hosts, broker_commands, host_threads, 1, ))
-    thread.start()
+    #thread = threading.Thread(target=cycle_broker, args=(hosts, broker_commands, host_threads, 1, ))
+    #thread.start()
 
     print(f"** Have {hosts_in_use+1} hosts to join")
     for i in range(hosts_in_use):
-        if i > 2:
+        if i > 6:
             print(f"Wait for {host_names[i]} to be done")
             host_threads[i].join()
     '''
@@ -234,6 +245,10 @@ def execute(output_dir, hosts, publishers, subscribers, ratio, broker_mode = Fal
     print(f"Terminating Broker {hosts[broker_cycle]}")
     hosts[0].terminate()
     hosts[1].terminate()
+    hosts[2].terminate()
+    hosts[3].terminate()
+    hosts[4].terminate()
+    hosts[5].terminate()
     print(f"Terminated Broker {hosts[broker_cycle]}")
     broker_lock.release()
     #hosts[len(hosts)-1].terminate()
@@ -250,13 +265,14 @@ def cycle_broker(hosts, broker_commands, host_threads, index):
 
     while not terminating:
 
-        time.sleep(2)
+        time.sleep(10)
         thread = host_threads[index]
         thread.join()
-        thread = threading.Thread(target=hosts[broker_cycle].cmdPrint, args=(broker_commands[0],))
+        print(f"Trying to start new broker thread {index}!")
+        thread = threading.Thread(target=hosts[index].cmdPrint, args=(broker_commands[0],))
         thread.start()
         host_threads[index] = thread
-    print(f"Done restarting broker node {hosts[broker_cycle]}")
+    print(f"Done restarting broker node {hosts[index]}")
 
 
 def main():

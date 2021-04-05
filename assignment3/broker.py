@@ -19,11 +19,12 @@ print(f"Current libzmq version is {zmq.zmq_version()}")
 print(f"Current  pyzmq version is {zmq.__version__}")
 
 parser = argparse.ArgumentParser ()
-parser.add_argument ("-zk", "--zookeeper_ip", type=str, default="10.0.0.7", help="Zookeeper IP Address")
+parser.add_argument ("-zk", "--zookeeper_ip", type=str, default="10.0.0.1", help="Zookeeper IP Address")
 parser.add_argument ("-zp", "--zookeeper_port", type=int, default=2181, help="Zookeeper Port")
 parser.add_argument ("-m", "--max_pub_count", type=int, default=-1, help="Maximum number of data propagations through broker.")
 parser.add_argument ("-k", "--keep_alive", type=int, default=-1, help="Time to keep the broker alive.")
 parser.add_argument ("-a", "--auto_mode", default=False, action="store_true")
+#parser.add_argument ("-h", "--history", type=int, default=5, help="Number of publication to store in a history.")
 args = parser.parse_args ()
 
 threads = []
@@ -55,8 +56,8 @@ def register_pubs():
 		while not terminating:
 			# Listen for new subs to come onto the system
 			listen_for_pub_registration()
-	except:
-		print("Pub registration listener ended")
+	except Exception as ex:
+		print(f"Pub registration listener ended: {ex}")
 
 def process_discovery():
 	global terminating
@@ -81,51 +82,81 @@ def pub_data_processor():
 				sys.exit(0)
 
 				break
-			#else:
-			#	print(f"Max: {max_pub_count}, current: {pub_count}")
+			else:
+				print(f"Max: {max_pub_count}, current: {pub_count}")
 
 			receive_pub_data()
 			pub_count += 1
-	except:
-		print("Data propagator ended")			
+	except Exception as ex:
+		print(f"Data propagator ended: {ex}")			
 
 def receive_pub_data():
 	# Get the pub message
-	string = listen_for_pub_data()
+	ownership_strength, history_count, filter_key, br_id, data = listen_for_pub_data()
 
-	if string != None:
+	if data != None:
 		# Forward published data to the appropriate subs
-		publish_to_sub(string)
+		publish_to_sub(ownership_strength, history_count, filter_key, br_id, data)
+
+
+def async_registration_thread():
+	global threads
+
+	zk_ip = args.zookeeper_ip
+	zk_port = args.zookeeper_port
+	register_broker(zk_ip,zk_port)
+
+	# Start new listener for subs
+	t = Thread(target=register_subs, args=())
+	t.start()
+	threads.append(t)
+
+	t = Thread(target=register_pubs, args=())
+	t.start()
+	threads.append(t)
+
+	# Start new listener for discovery requests
+	t = Thread(target=process_discovery, args=())
+	t.start()
+	threads.append(t)
+
+	# Start pub data listener
+	t = Thread(target=pub_data_processor, args=())
+	t.start()
+	threads.append(t)
+
 
 
 # Register broker
 #zk_ip = "10.0.0.7"
-zk_ip = args.zookeeper_ip
-zk_port = args.zookeeper_port
-register_broker(zk_ip,zk_port)
-
-# Start new listener for subs
-t = Thread(target=register_subs, args=())
-t.start()
-threads.append(t)
-
-t = Thread(target=register_pubs, args=())
-t.start()
-threads.append(t)
-
-# Start new listener for discovery requests
-t = Thread(target=process_discovery, args=())
-t.start()
-threads.append(t)
-
-# Start pub data listener
-t = Thread(target=pub_data_processor, args=())
-t.start()
-threads.append(t)
-
-#if not args.auto_mode:
-
 if args.keep_alive == -1:
+
+	zk_ip = args.zookeeper_ip
+	zk_port = args.zookeeper_port
+	register_broker(zk_ip,zk_port)
+
+	# Start new listener for subs
+	t = Thread(target=register_subs, args=())
+	t.start()
+	threads.append(t)
+
+	t = Thread(target=register_pubs, args=())
+	t.start()
+	threads.append(t)
+
+	# Start new listener for discovery requests
+	t = Thread(target=process_discovery, args=())
+	t.start()
+	threads.append(t)
+
+	# Start pub data listener
+	t = Thread(target=pub_data_processor, args=())
+	t.start()
+	threads.append(t)
+
+	#if not args.auto_mode:
+
+#if args.keep_alive == -1:
 	#while True:
 	#	pass
 	# Wait for input to kill the broker and terminate connections
@@ -135,6 +166,12 @@ if args.keep_alive == -1:
 	disconnect()
 	sys.exit(0)
 else:
+
+	# Start asychronous registration and workers
+	t = Thread(target=async_registration_thread, args=())
+	t.start()
+	threads.append(t)
+
 	time.sleep(args.keep_alive)
 	print("Disconnected from the server")
 	terminating = True
