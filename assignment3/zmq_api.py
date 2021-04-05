@@ -92,13 +92,17 @@ zk_ip = ""
 zk_port = 0
 
 def close_context():
-	context.destroy()
+	try:
+		context.destroy()
+	except Exception as ex:
+		print(f"Exception while destroying context: {ex}")
 
 ## Functions for publisher communication ##
 
 # Registers publisher
 def register_pub(ip, topic, topic_filter, history):
 	print("Registering to broker at tcp://%s:5554 with topic/filter %s/%s" % (ip, topic, topic_filter))
+	sys.stdout.flush()
 
 	global pub_history_count
 	pub_history_count = history
@@ -119,6 +123,7 @@ def register_pub(ip, topic, topic_filter, history):
 	pub_socket.bind("tcp://*:5556")
 	pub_dict[topic] = pub_socket
 	print("Registered pub on tcp://*:5556")
+	sys.stdout.flush()
 	pub_heartbeat_socket.bind("tcp://*:5550")
 	_thread.start_new_thread(heartbeat_response, ())
 
@@ -147,6 +152,7 @@ def publish(topic, topic_filter, value, message_number, timestamp):
 
 			print(f"Sending data to subscriber at {timestamp} for topic {topic}_{topic_filter}")
 			print(published_message_history)
+			sys.stdout.flush()
 
 			# Generate JSON object of messages
 			tmp_data = dict()
@@ -164,6 +170,7 @@ def publish(topic, topic_filter, value, message_number, timestamp):
 			send_str = f"{topic_filter} " + json.dumps(tmp_data)
 			print(f"Actually publishing: {send_str}")
 			pub_dict.get(topic).send_string(send_str)
+			sys.stdout.flush()
 
 
 	finally:
@@ -244,6 +251,7 @@ def register_sub(broker, ips, topic, topic_filter, process_response, max_listens
 	global broker_ip
 
 	print(f"Registering sub with topic filter {topic_filter} from {broker}")
+	sys.stdout.flush()
 	for ip in ips:
 		tmp_socket = context.socket(zmq.SUB)
 		print(f"filtering for {topic} from {ip}")
@@ -254,6 +262,7 @@ def register_sub(broker, ips, topic, topic_filter, process_response, max_listens
 		else:
 			sub_dict[topic_filter].append(tmp_socket)
 		print("Listening to publisher at %s for %s" % (ip, topic_filter))
+		sys.stdout.flush()
 
 		# Request historic data to be sent
 		#print("Requesting historic data from publisher")
@@ -283,12 +292,14 @@ def listen(topic_filter, index, broker_mode):
 			sock = sub_dict.get(topic_filter)[index]
 			if sock != None:
 				print("Have socket for topic_filter %s, waiting for message" % (topic_filter))
+				sys.stdout.flush()
 				string = sock.recv_string()
 				string = string[len(topic_filter)+1:]
 				success = True
 				return string
 		except:
 			print("Didn't see any data!!")
+			sys.stdout.flush()
 			# The broker may have gone down, wait a second and reconnect
 			sock = sub_dict.get(topic_filter)[index]
 			sock.close()
@@ -469,14 +480,15 @@ def register_broker(z_ip, z_port):
 
 def register_pub_with_broker(ip, topic, topic_filter, history):
 	print("Registering to broker at tcp://%s:5554 with topic/filter: %s/%s" % (ip, topic, topic_filter))
-
+	sys.stdout.flush()
 	global pub_history_count
 	pub_history_count = history
 	global published_message_history
 	published_message_history = [""] * history
 
 	global pub_sub_broker_key
-
+	sys.stdout.flush()
+	
 	tmp_socket = context.socket(zmq.REQ)
 	tmp_socket.connect("tcp://%s:5554" % ip)
 	local_ip = get_local_ip()
@@ -497,6 +509,7 @@ def register_pub_with_broker(ip, topic, topic_filter, history):
 def register_sub_with_broker(ip, topic, topic_filter, history):
 	global broker_port
 	print(f"Registering sub with broker {ip}")
+	sys.stdout.flush()
 	tmp_socket = context.socket(zmq.REQ)
 	tmp_socket.connect("tcp://%s:5555" % ip)
 	tmp_socket.send_string(f"Registering {topic} {topic_filter} history {history} {pub_sub_broker_key}")
@@ -508,6 +521,7 @@ def register_sub_with_broker(ip, topic, topic_filter, history):
 
 	broker_port = resp
 	print(f"Registering sub to {ip}:{broker_port}")
+	sys.stdout.flush()
 	sub_socket.connect("tcp://%s:%d" % (ip, int(broker_port)))
 	sub_socket.setsockopt( zmq.RCVTIMEO, 1000 ) # milliseconds
 	sub_socket.setsockopt(zmq.LINGER, 0)
@@ -606,7 +620,7 @@ def listen_for_pub_registration():
 	if isinstance(resp, bytes):
 		resp = resp.decode("ascii")
 	print(f"broker_keys: {broker_keys}")
-	print("Got a publisher registration message: %s" % resp)
+	print(f"Got a publisher registration message on {broker_id}: {resp}")
 	resp = resp.split(' ')
 	ip = resp[len(resp)-1]
 	history = resp[len(resp)-2]
@@ -825,6 +839,8 @@ def listen_for_pub_data():
 	return ownership_strength, history_count, filter_key, br_id, data
 
 def publish_to_sub(ownership_strength, history_count, filter_key, br_id, data):
+	if sub_dict.get(br_id) == None:
+		print(f"Sub_dict.get({br_id}) does not exist for some reason!")
 	for topic_filter, histories in sub_dict.get(br_id).items():
 		if topic_filter in data:
 			for history, sock in histories.items():
@@ -991,27 +1007,44 @@ def add_broker(zk_ip, zk_port):
 					driver.add_node(f'/broker/{i}',ip,False)
 					leader = True
 					broker_id = str(i)
-					print("Elected as leader, continuing")
+					print(f"Elected as leader, continuing - {ip}")
 					break
 				except Exception as ex:
 					print(f"leader already exists for {i}: {ex}")
 			print("Checking if I am a leader")
 			if not leader:
-				raise Exception("Was not able to become leader")
+				raise Exception(f"Was not able to become leader {ip}")
 			else:
 				set_broker_keys()
-				print(f"Setting broker keys: {broker_keys}")
+				print(f"Setting broker keys on {broker_id}: {broker_keys}")
 
 				# Now that we have the broker keys, we can try to create the other nodes
 				for key in broker_keys:
 					if key == broker_id:
 						continue
 					else:
-						try:
-							print(f"Creating broker znode {key}")
-							driver.add_node(f'/broker/{key}',ip,False)
-						except Exception as ex:
-							print(f"leader already exists for {i}: {ex}")
+						created = False
+						while not created:
+							try:
+								print(f"Broker_id {broker_id} is creating broker znode {key}")
+								driver.add_node(f'/broker/{key}',ip,False)
+								print("********************************")
+								print(f"broker_id {broker_id} sees:")
+								broker_values = driver.get_children(f"/broker")
+								for bv in broker_values:
+									val = driver.get_node_if_exists(f"/broker/{bv}")
+									print(f"\t/broker/{bv}: {val}")
+								print("********************************")
+								created = True
+							except Exception as ex:
+								print(f"leader already exists for {key}: {ex}")
+								print("********************************")
+								print(f"broker_id {broker_id} sees:")
+								broker_values = driver.get_children(f"/broker")
+								for bv in broker_values:
+									val = driver.get_node_if_exists(f"/broker/{bv}")
+									print(f"\t/broker/{bv}: {val}")
+								print("********************************")
 
 
 		except Exception as ex:
@@ -1027,7 +1060,7 @@ def add_broker(zk_ip, zk_port):
 					tmp = 1
 					#print("")
 
-			print("There is already a leader, waiting until leader leaves")
+			print(f"There is already a leader, waiting until leader leaves - {ip}")
 
 			print("Watching for broker znode to change")
 			for i in range(6):
@@ -1053,15 +1086,6 @@ def recover_broker():
 	sub_port = 5556
 	
 	# Reset all dicts
-	for key, v in pub_topic_dict.copy().items():
-		del pub_topic_dict[key]
-	#for key, v in heartbeat_sock_dict.copy().items():
-	#	del heartbeat_sock_dict[key]
-	for key, v in sub_port_dict.copy().items():
-		del sub_port_dict[key]
-	for key, v in sub_dict.copy().items():
-		del sub_dict[key]
-
 
 	#pub_topic_dict = dict()
 	#heartbeat_sock_dict = dict()
@@ -1139,11 +1163,11 @@ def recover_broker():
 	in_broker_recovery = False
 
 	# generate sub socket and ports
-	ports_in_use = []
 	for i in range(6):
 		sub_port_dict[str(i)] = dict()
 		sub_dict[str(i)] = dict()
 
+	ports_in_use = []
 	brokers = driver.get_children("/sub_dict")
 	if brokers != None:
 		for br in brokers:
@@ -1161,13 +1185,13 @@ def recover_broker():
 									port = port.decode("ascii")
 
 								ports_in_use.append(int(port))
-								sub_port_dict[topic] = dict()
-								sub_port_dict.get(topic)[history] = int(port)
+								sub_port_dict.get(br)[topic] = dict()
+								sub_port_dict.get(br).get(topic)[history] = int(port)
 
 								sock = context.socket(zmq.PUB)
 								sock.bind("tcp://*:%d" % int(port))
-								sub_dict[topic] = dict()
-								sub_dict.get(topic)[history] = sock
+								sub_dict.get(br)[topic] = dict()
+								sub_dict.get(br).get(topic)[history] = sock
 					if len(ports_in_use) > 0:
 						sub_port = max(ports_in_use) + 1
 
@@ -1494,13 +1518,26 @@ def discover_broker(topic, topic_filter, isPub):
 		new_val = int(pub_sub_broker_key)+1
 		driver.update_value('/pub_sub_count',f"{new_val}".encode('utf-8'))
 
+	tmp_key = pub_sub_broker_key
 	# Since 6 is 3!, meaning this value should be from 0 - 5
 	pub_sub_broker_key = str(int(pub_sub_broker_key) % 6)
 
 	# Look for topic_filter_key in broker maps first, and overwrite broker_id if found
 	new_broker_key = check_for_filter(topic_filter_key)
+
+	print(f"{topic_filter_key}, isPub: {isPub}, got {pub_sub_broker_key}|{new_broker_key}, originally {tmp_key}")
+	sys.stdout.flush()
+	
 	if new_broker_key != None:
 		pub_sub_broker_key = new_broker_key
+
+	print("********************************")
+	print(f"pub_sub key {tmp_key}({isPub}) sees:")
+	broker_values = driver.get_children(f"/broker")
+	for bv in broker_values:
+		val = driver.get_node_if_exists(f"/broker/{bv}")
+		print(f"\t/broker/{bv}: {val}")
+	print("********************************")
 
 	exists = driver.check_for_node(f'/broker/{pub_sub_broker_key}')
 	if not exists:
@@ -1511,7 +1548,8 @@ def discover_broker(topic, topic_filter, isPub):
 			print("broker has come online")
 			watch_lock.release()
 
-		print("Watching for broker to come online")
+		print(f"Watching for broker to come online - {pub_sub_broker_key}")
+		sys.stdout.flush()
 		driver.watch_node(f'/broker/{pub_sub_broker_key}', watch_func)
 
 		watch_lock.acquire()
@@ -1537,6 +1575,7 @@ def discover_broker(topic, topic_filter, isPub):
 
 		broker_ip = value
 		print(f"Found broker {value}, monitoring for new broker asynchronously")
+		sys.stdout.flush()
 		async_broker_monitor()
 
 		print(value)

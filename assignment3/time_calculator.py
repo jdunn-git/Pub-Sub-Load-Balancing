@@ -43,7 +43,7 @@ for ent in entries:
 
 				for data_line in f.readlines():
 					data = data_line.strip('\n')
-					d_zip, d_temp, d_hum, d_time = data.split()
+					d_zip, d_num, d_temp, d_hum, d_time = data.split()
 					key = f"{d_zip} {d_temp} {d_hum}"
 					data_dict[key] = d_time
 				

@@ -28,7 +28,7 @@ parser.add_argument ("-zk", "--zookeeper_ip", type=str, default="10.0.0.1", help
 parser.add_argument ("-zp", "--zookeeper_port", type=int, default=2181, help="Zookeeper Port")
 parser.add_argument ("-z", "--zip_code", type=str, default="10001", help="Zip Code")
 parser.add_argument ("-e", "--executions", type=int, default=20, help="Number of executions for the program")
-parser.add_argument ("-c", "--history", type=int, default=10, help="Number of messages to store in history")
+parser.add_argument ("-c", "--history", type=int, default=5, help="Number of messages to store in history")
 parser.add_argument ("-w", "--record_time", default=False, action="store_true")
 parser.add_argument ("-d", "--record_dir", type=str, default="timing_data", help="Directory to store timing data")
 args = parser.parse_args ()

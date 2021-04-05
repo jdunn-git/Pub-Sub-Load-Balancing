@@ -72,23 +72,23 @@ def pub_data_processor():
 	global terminating
 	max_pub_count = args.max_pub_count
 	pub_count = 0
-	#try:
-	while not terminating:
-	# Break if we have exceeded the maximuim count
-		if (max_pub_count != -1 and pub_count >= max_pub_count):
-			print("max pub count hit")
-			terminating = True
-			disconnect()
-			sys.exit(0)
+	try:
+		while not terminating:
+		# Break if we have exceeded the maximuim count
+			if (max_pub_count != -1 and pub_count >= max_pub_count):
+				print("max pub count hit")
+				terminating = True
+				disconnect()
+				sys.exit(0)
 
-			break
-		#else:
-		#	print(f"Max: {max_pub_count}, current: {pub_count}")
+				break
+			else:
+				print(f"Max: {max_pub_count}, current: {pub_count}")
 
-		receive_pub_data()
-		pub_count += 1
-	#except Exception as ex:
-	#	print(f"Data propagator ended: {ex}")			
+			receive_pub_data()
+			pub_count += 1
+	except Exception as ex:
+		print(f"Data propagator ended: {ex}")			
 
 def receive_pub_data():
 	# Get the pub message
@@ -99,34 +99,64 @@ def receive_pub_data():
 		publish_to_sub(ownership_strength, history_count, filter_key, br_id, data)
 
 
+def async_registration_thread():
+	global threads
+
+	zk_ip = args.zookeeper_ip
+	zk_port = args.zookeeper_port
+	register_broker(zk_ip,zk_port)
+
+	# Start new listener for subs
+	t = Thread(target=register_subs, args=())
+	t.start()
+	threads.append(t)
+
+	t = Thread(target=register_pubs, args=())
+	t.start()
+	threads.append(t)
+
+	# Start new listener for discovery requests
+	t = Thread(target=process_discovery, args=())
+	t.start()
+	threads.append(t)
+
+	# Start pub data listener
+	t = Thread(target=pub_data_processor, args=())
+	t.start()
+	threads.append(t)
+
+
+
 # Register broker
 #zk_ip = "10.0.0.7"
-zk_ip = args.zookeeper_ip
-zk_port = args.zookeeper_port
-register_broker(zk_ip,zk_port)
-
-# Start new listener for subs
-t = Thread(target=register_subs, args=())
-t.start()
-threads.append(t)
-
-t = Thread(target=register_pubs, args=())
-t.start()
-threads.append(t)
-
-# Start new listener for discovery requests
-t = Thread(target=process_discovery, args=())
-t.start()
-threads.append(t)
-
-# Start pub data listener
-t = Thread(target=pub_data_processor, args=())
-t.start()
-threads.append(t)
-
-#if not args.auto_mode:
-
 if args.keep_alive == -1:
+
+	zk_ip = args.zookeeper_ip
+	zk_port = args.zookeeper_port
+	register_broker(zk_ip,zk_port)
+
+	# Start new listener for subs
+	t = Thread(target=register_subs, args=())
+	t.start()
+	threads.append(t)
+
+	t = Thread(target=register_pubs, args=())
+	t.start()
+	threads.append(t)
+
+	# Start new listener for discovery requests
+	t = Thread(target=process_discovery, args=())
+	t.start()
+	threads.append(t)
+
+	# Start pub data listener
+	t = Thread(target=pub_data_processor, args=())
+	t.start()
+	threads.append(t)
+
+	#if not args.auto_mode:
+
+#if args.keep_alive == -1:
 	#while True:
 	#	pass
 	# Wait for input to kill the broker and terminate connections
@@ -136,6 +166,12 @@ if args.keep_alive == -1:
 	disconnect()
 	sys.exit(0)
 else:
+
+	# Start asychronous registration and workers
+	t = Thread(target=async_registration_thread, args=())
+	t.start()
+	threads.append(t)
+
 	time.sleep(args.keep_alive)
 	print("Disconnected from the server")
 	terminating = True
