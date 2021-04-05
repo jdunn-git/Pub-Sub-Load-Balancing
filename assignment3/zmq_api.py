@@ -1196,6 +1196,8 @@ def recover_broker():
 						sub_port = max(ports_in_use) + 1
 
 def update_broker_count():
+	# Uncomment this return to disable load balancing
+	return
 	global brokers_in_use
 	global broker_id
 
