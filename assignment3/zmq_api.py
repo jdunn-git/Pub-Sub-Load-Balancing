@@ -1197,7 +1197,7 @@ def recover_broker():
 
 def update_broker_count():
 	# Uncomment this return to disable load balancing
-	return
+	# return
 	global brokers_in_use
 	global broker_id
 
