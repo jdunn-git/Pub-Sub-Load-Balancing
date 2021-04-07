@@ -1,4 +1,4 @@
-# Assignment 2
+# Assignment 3
 
 The functionality of the assignment depends on vagrant. To operate the assignment, you must have vagrant installed on host.
 
@@ -16,9 +16,20 @@ Broker Mode: `sudo python3 /vagrant/assignment_executor.py -s 5 -p 5 -f 1 -b -e 
 
 Flood Mode: `sudo python3 /vagrant/assignment_executor.py -s 5 -p 5 -f 1 -e 20`
 
+## Test Cleanup
+Due to how our API is using Zookeeper for recovery and load balancing, it's possible that you may need to clean up Zookeeper between tests, especially if anything was manually existed instead of exiting on its own. The easiest way to do this is to start the ZK server, and then run the following commands to remove the znodes:
+```
+deleteall /broker
+deleteall /brokers_in_use
+deleteall /pub_topic_dict
+deleteall /pub_sub_count
+deleteall /sub_dict
+```
+
+Note that these don't clean up immediately on startup because they are intentionally reused for both recovery and load balancing. They should be cleaned up if publishers, subscribers, and brokers terminate on their own, but the safest thing to do is to clean up manually, especially if any process is manually terminated.
 
 ## Timing Experiments
-To time it, add a couple of new parameters to the executable like so: `sudo python3 /vagrant/assignment_executor.py -s 5 -p 5 -b -e 20 -w -d "test_1"`
+To time it, add a couple of new parameters to the executable like so: `sudo python3 /vagrant/assignment_executor.py -s 5 -p 5 -b -e 30 -w -d "test_1"`
 
 This will generate a new directory for "test_1" in the assignment_output directory.
 
@@ -45,13 +56,23 @@ We can run additional tests and increment the -d directoy name, and the output w
 ## Assignment Work Distribution
 
 #### Pub/Sub Model: Joshua Dunn and Terrence Williams (5 hours)
-* Updated assignment 1 code to be easier to build off of for assignment 2
-* Implemented better discovery logic in broker for subs to discover pubs in flood mode
-* Incorporated ZooKeeper into Pub/Sub to discover broker.
+* Updated assignment 2 code to be easier to build off of for assignment 3
+* Refactored the publisher's and subscriber's broker discovory algorithm to reduce complexity, and make easier to expand.
 
-#### Broker: Joshua Dunn (5 hours)
-* Implemented the broker and flooder architecture with time tracking
-* Incorporated ZooKeeper for leader election and recovery
+#### Load Balancing: Joshua Dunn (10 hours)
+* Implemented load balancing algorithm across brokers.
+* Refactored zookeeper maps and broker recovery to support load balancing, so that brokers can scale up and down as needed
+* Refactored pub/sub broker discovery logic to have a load-balancing proof approach, which will work no matter how many "primary" brokers there are.
+
+#### Publisher Ownership Strength (5 hours)
+* Implemented ownership strength determination at the broker level.
+* Publisher strength is maitained at the api level.
+* Publishers will be assigned to subscribers based on ownership strength.
+
+#### Publisher History (5 hours)
+* Publishers will maintain a running history of messages, and will sent the entire history with each publication (now in JSON format).
+* Broker will only assign publishers (or forward messages in broker mode) to subscribers if the strength is high enough. 
+* Subscribers will filter messages to only use the amount of history they are wanting.
 
 #### Testing and Data Analytics: Terrence Williams (5 hour)
 * Manual testing on Mininet with ZooKeeper on and multiple brokers coming and going
