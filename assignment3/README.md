@@ -40,18 +40,18 @@ We can run additional tests and increment the -d directoy name, and the output w
 > Note that the csv structure is: [test_name], [pub-sub pair 1 time difference 1], [pub-sub pair 1 time difference 2], ..., [pub-sub pair n time difference m], where n is the number of pub-sub pairs, and m is the number of messages received by the subscribers
 
 ## Performance and Unit Test Results:
-![](https://github.com/jdunn-git/CS6381-Assignment-1/blob/master/assignment2/assignment_output/images/stats.png)
+![](https://github.com/jdunn-git/CS6381-Assignment-1/blob/master/assignment3/assignment_output/images/stats.png)
 
-![](https://github.com/jdunn-git/CS6381-Assignment-1/blob/master/assignment2/assignment_output/images/P0_S10_Flood.png)
-![](https://github.com/jdunn-git/CS6381-Assignment-1/blob/master/assignment2/assignment_output/images/P10_S10_Broker.png)
-![](https://github.com/jdunn-git/CS6381-Assignment-1/blob/master/assignment2/assignment_output/images/P10_S50_Broker.png)
-![](https://github.com/jdunn-git/CS6381-Assignment-1/blob/master/assignment2/assignment_output/images/P10_S50_Flood.png)
-![](https://github.com/jdunn-git/CS6381-Assignment-1/blob/master/assignment2/assignment_output/images/P10_S100_Broker.png)
-![](https://github.com/jdunn-git/CS6381-Assignment-1/blob/master/assignment2/assignment_output/images/P10_S100_Flood.png)
-![](https://github.com/jdunn-git/CS6381-Assignment-1/blob/master/assignment2/assignment_output/images/P50_S10_Broker.png)
-![](https://github.com/jdunn-git/CS6381-Assignment-1/blob/master/assignment2/assignment_output/images/P50_S10_Flood.png)
-![](https://github.com/jdunn-git/CS6381-Assignment-1/blob/master/assignment2/assignment_output/images/P100_S10_Broker.png)
-![](https://github.com/jdunn-git/CS6381-Assignment-1/blob/master/assignment2/assignment_output/images/P100_S10_Flood.png)
+![](https://github.com/jdunn-git/CS6381-Assignment-1/blob/master/assignment3/assignment_output/images/S5_P5_Broker_LB.png)
+![](https://github.com/jdunn-git/CS6381-Assignment-1/blob/master/assignment3/assignment_output/images/S5_P5_Broker.png)
+![](https://github.com/jdunn-git/CS6381-Assignment-1/blob/master/assignment3/assignment_output/images/S5_P5_Flood_LB.png)
+![](https://github.com/jdunn-git/CS6381-Assignment-1/blob/master/assignment3/assignment_output/images/S5_P5_Flood.png)
+![](https://github.com/jdunn-git/CS6381-Assignment-1/blob/master/assignment3/assignment_output/images/S25_P25_Broker_LB.png)
+![](https://github.com/jdunn-git/CS6381-Assignment-1/blob/master/assignment3/assignment_output/images/S25_P25_Flood_LB.png)
+![](https://github.com/jdunn-git/CS6381-Assignment-1/blob/master/assignment3/assignment_output/images/S25_P25_Flood.png)
+![](https://github.com/jdunn-git/CS6381-Assignment-1/blob/master/assignment3/assignment_output/images/S50_P50_Broker_LB.png)
+![](https://github.com/jdunn-git/CS6381-Assignment-1/blob/master/assignment3/assignment_output/images/S50_P50_Flood_LB.png)
+![](https://github.com/jdunn-git/CS6381-Assignment-1/blob/master/assignment3/assignment_output/images/S50_P50_Flood.png)
 
 ## Assignment Work Distribution
 
@@ -71,7 +71,7 @@ We can run additional tests and increment the -d directoy name, and the output w
 
 #### Publisher History (5 hours)
 * Publishers will maintain a running history of messages, and will sent the entire history with each publication (now in JSON format).
-* Broker will only assign publishers (or forward messages in broker mode) to subscribers if the strength is high enough. 
+* Broker will only assign publishers (or forward messages in broker mode) to subscribers if the strength is high enough.
 * Subscribers will filter messages to only use the amount of history they are wanting.
 
 #### Testing and Data Analytics: Terrence Williams (5 hour)
